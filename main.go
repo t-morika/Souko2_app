@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	_ "modernc.org/sqlite"
@@ -24,9 +26,9 @@ type InventoryItem struct {
 
 var db *sql.DB
 
-func initDB() {
+func initDB(dbPath string) {
 	var err error
-	db, err = sql.Open("sqlite", "./inventory.db")
+	db, err = sql.Open("sqlite", dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,13 +77,26 @@ func initDB() {
 }
 
 func main() {
-	initDB()
+	exePath, err := os.Executable()
+	if err != nil {
+		log.Fatal(err)
+	}
+	baseDir := filepath.Dir(exePath)
+
+	// Run as a local "tablet app" by default.
+	gin.SetMode(gin.ReleaseMode)
+
+	initDB(filepath.Join(baseDir, "inventory.db"))
 	defer db.Close()
 
 	r := gin.Default()
+	_ = r.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 
 	// Serve static files
-	r.Static("/static", "./")
+	r.Static("/static", baseDir)
+	r.StaticFile("/manifest.webmanifest", filepath.Join(baseDir, "manifest.webmanifest"))
+	r.StaticFile("/sw.js", filepath.Join(baseDir, "sw.js"))
+	r.StaticFile("/index.html", filepath.Join(baseDir, "index.html"))
 
 	// API routes
 	r.GET("/api/products", getProducts)
@@ -89,9 +104,12 @@ func main() {
 	r.POST("/api/inventory/update", updateInventory)
 	r.POST("/api/barcode/search", searchByBarcode)
 
+	// Avoid noisy 404 in browsers.
+	r.GET("/favicon.ico", func(c *gin.Context) { c.Status(http.StatusNoContent) })
+
 	// Serve index.html
 	r.GET("/", func(c *gin.Context) {
-		c.File("./index.html")
+		c.File(filepath.Join(baseDir, "index.html"))
 	})
 
 	log.Println("Server starting on http://localhost:8080")

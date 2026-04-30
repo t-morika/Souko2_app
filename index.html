@@ -3,9 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>PC機器在庫管理 - 機器一覧版</title>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/static/app-icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/static/app-icon.svg">
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" href="/static/style-list.css">
 </head>
 <body>
     <div class="app">
@@ -72,6 +77,13 @@
             <span>Warehouse: WH-JP-001</span>
         </footer>
     </div>
-    <script src="/static/script-list.js"></script>
+    <script src="/static/script.js"></script>
+    <script>
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("/sw.js").catch(() => {});
+            });
+        }
+    </script>
 </body>
 </html>

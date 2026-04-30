@@ -1,0 +1,20 @@
+{
+  "name": "PC機器在庫管理",
+  "short_name": "在庫管理",
+  "description": "タブレット向けPC機器在庫管理（ローカル運用）",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/static/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

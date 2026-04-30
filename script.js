@@ -1,69 +1,344 @@
 document.addEventListener('DOMContentLoaded', function() {
     const barcodeInput = document.getElementById('barcode');
     const searchBarcodeBtn = document.getElementById('search-barcode');
-    const quickBtns = document.querySelectorAll('.quick-btn');
-    const clearBtn = document.getElementById('clear-product');
-    const quantityMinusBtn = document.getElementById('quantity-minus');
-    const quantityPlusBtn = document.getElementById('quantity-plus');
+    const categoryButtons = document.getElementById('category-buttons');
+    const deviceList = document.getElementById('device-list');
+    const productDetail = document.getElementById('product-detail');
     const stockInBtn = document.getElementById('stock-in');
     const stockOutBtn = document.getElementById('stock-out');
-    const productDetail = document.getElementById('product-detail');
-    const productSection = document.getElementById('product-section');
     const notifications = document.getElementById('notifications');
 
-    function getQuantityInput() {
-        return document.getElementById('quantity');
-    }
-
-    let products = [];
+    let inventoryItems = [];
     let currentProduct = null;
-    let notificationsList = [];
+    let currentCategoryFilter = 'all';
 
-    // Load products
-    loadProducts();
+    fetchInventory();
 
-    // Event listeners
-    searchBarcodeBtn.addEventListener('click', searchByBarcode);
+    // If input is empty, use camera scanner (tablet); otherwise search text.
+    searchBarcodeBtn.addEventListener('click', () => {
+        if (!barcodeInput.value.trim()) {
+            openCameraScanner();
+            return;
+        }
+        searchByBarcode();
+    });
     barcodeInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             searchByBarcode();
         }
     });
 
-    quickBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const productId = parseInt(btn.dataset.productId);
-            selectProduct(productId);
-        });
-    });
-
-    clearBtn.addEventListener('click', clearProduct);
-    quantityMinusBtn.addEventListener('click', () => adjustQuantity(-1));
-    quantityPlusBtn.addEventListener('click', () => adjustQuantity(1));
-    quantityInput.addEventListener('change', (e) => {
-        const val = parseInt(e.target.value);
-        if (val < 1) e.target.value = 1;
-    });
-
     stockInBtn.addEventListener('click', () => updateStock('in'));
     stockOutBtn.addEventListener('click', () => updateStock('out'));
 
-    // Focus barcode input on load
-    barcodeInput.focus();
+    async function openCameraScanner() {
+        // Secure context is required for camera on most devices.
+        if (!window.isSecureContext) {
+            showNotification('カメラを使うには https または localhost で開いてください', 'out');
+            return;
+        }
+        if (!navigator.mediaDevices?.getUserMedia) {
+            showNotification('この端末/ブラウザはカメラに対応していません', 'out');
+            return;
+        }
+        if (!('BarcodeDetector' in window)) {
+            showNotification('この端末/ブラウザはカメラ読取に未対応です', 'out');
+            return;
+        }
 
-    function loadProducts() {
-        fetch('/api/products')
+        const overlay = document.createElement('div');
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.style.cssText = [
+            'position:fixed',
+            'inset:0',
+            'background:rgba(0,0,0,0.75)',
+            'z-index:9999',
+            'display:flex',
+            'align-items:center',
+            'justify-content:center',
+            'padding:16px'
+        ].join(';');
+
+        const panel = document.createElement('div');
+        panel.style.cssText = [
+            'width:min(720px, 100%)',
+            'background:rgba(23,23,23,0.95)',
+            'border:1px solid rgba(255,255,255,0.14)',
+            'border-radius:16px',
+            'overflow:hidden',
+            'box-shadow:0 25px 50px -12px rgba(0,0,0,0.65)'
+        ].join(';');
+
+        const header = document.createElement('div');
+        header.style.cssText = [
+            'display:flex',
+            'align-items:center',
+            'justify-content:space-between',
+            'padding:12px 14px',
+            'border-bottom:1px solid rgba(255,255,255,0.10)',
+            'gap:12px'
+        ].join(';');
+
+        const title = document.createElement('div');
+        title.textContent = 'カメラでバーコード読み取り';
+        title.style.cssText = 'font-weight:900;color:#f5f5f5;font-size:14px;';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.textContent = '閉じる';
+        closeBtn.style.cssText = [
+            'border:1px solid rgba(255,255,255,0.14)',
+            'background:rgba(255,255,255,0.06)',
+            'color:#f5f5f5',
+            'padding:8px 12px',
+            'border-radius:12px',
+            'font-weight:900',
+            'cursor:pointer'
+        ].join(';');
+
+        const videoWrap = document.createElement('div');
+        videoWrap.style.cssText = 'position:relative;background:#000;';
+
+        const video = document.createElement('video');
+        video.setAttribute('playsinline', '');
+        video.muted = true;
+        video.autoplay = true;
+        video.style.cssText = 'width:100%;height:auto;display:block;aspect-ratio:16/10;object-fit:cover;';
+
+        const hint = document.createElement('div');
+        hint.textContent = 'バーコードを枠内に入れてください';
+        hint.style.cssText = [
+            'position:absolute',
+            'left:12px',
+            'right:12px',
+            'bottom:12px',
+            'background:rgba(0,0,0,0.45)',
+            'color:#fff',
+            'padding:10px 12px',
+            'border-radius:12px',
+            'font-weight:700',
+            'font-size:12px'
+        ].join(';');
+
+        header.appendChild(title);
+        header.appendChild(closeBtn);
+        videoWrap.appendChild(video);
+        videoWrap.appendChild(hint);
+        panel.appendChild(header);
+        panel.appendChild(videoWrap);
+        overlay.appendChild(panel);
+        document.body.appendChild(overlay);
+
+        let stream;
+        let rafId = 0;
+        const detector = new BarcodeDetector({
+            formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'qr_code']
+        });
+
+        const cleanup = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = 0;
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+                stream = undefined;
+            }
+            overlay.remove();
+        };
+
+        closeBtn.addEventListener('click', cleanup);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) cleanup();
+        });
+
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' } },
+                audio: false
+            });
+            video.srcObject = stream;
+            await video.play();
+        } catch (e) {
+            cleanup();
+            showNotification('カメラ権限が拒否されました', 'out');
+            return;
+        }
+
+        const tick = async () => {
+            if (!video.videoWidth) {
+                rafId = requestAnimationFrame(tick);
+                return;
+            }
+            try {
+                const barcodes = await detector.detect(video);
+                if (barcodes && barcodes.length > 0) {
+                    const value = (barcodes[0].rawValue || '').trim();
+                    if (value) {
+                        barcodeInput.value = value;
+                        cleanup();
+                        searchByBarcode();
+                        return;
+                    }
+                }
+            } catch {
+                // ignore transient detection errors
+            }
+            rafId = requestAnimationFrame(tick);
+        };
+        rafId = requestAnimationFrame(tick);
+    }
+
+    function fetchInventory() {
+        fetch('/api/inventory')
             .then(response => response.json())
             .then(data => {
-                products = data;
-                // Map quick buttons to products (assuming first 5 products)
-                quickBtns.forEach((btn, index) => {
-                    if (products[index]) {
-                        btn.dataset.productId = products[index].id;
-                    }
-                });
+                inventoryItems = data.map(item => ({
+                    ...item.product,
+                    quantity: item.quantity,
+                    displayCategory: mapCategory(item.product.category)
+                }));
+                renderCategoryButtons();
+                renderDeviceList();
             })
-            .catch(error => console.error('Error loading products:', error));
+            .catch(error => console.error('Error loading inventory:', error));
+    }
+
+    function mapCategory(category) {
+        if (category === 'マウス' || category === 'セキュリティワイヤー') {
+            return '消耗品';
+        }
+        if (category === '一体型PC') {
+            return '一体型';
+        }
+        return category;
+    }
+
+    function renderCategoryButtons() {
+        const categories = ['all', '消耗品', 'ノートPC', '一体型', 'モニター'];
+        categoryButtons.innerHTML = '';
+
+        categories.forEach(category => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'category-button';
+            button.textContent = category === 'all' ? 'すべて' : category;
+            if (category === currentCategoryFilter) {
+                button.classList.add('active');
+            }
+            button.addEventListener('click', () => {
+                currentCategoryFilter = category;
+                renderCategoryButtons();
+                renderDeviceList();
+            });
+            categoryButtons.appendChild(button);
+        });
+    }
+
+    function renderDeviceList() {
+        deviceList.innerHTML = '';
+        const displayOrder = ['消耗品', 'ノートPC', '一体型', 'モニター'];
+        const grouped = inventoryItems.reduce((acc, item) => {
+            acc[item.displayCategory] = acc[item.displayCategory] || [];
+            acc[item.displayCategory].push(item);
+            return acc;
+        }, {});
+
+        displayOrder.forEach(category => {
+            if (currentCategoryFilter !== 'all' && currentCategoryFilter !== category) return;
+            if (!grouped[category] || grouped[category].length === 0) return;
+
+            const heading = document.createElement('div');
+            heading.className = 'list-section-heading';
+            heading.textContent = category;
+            deviceList.appendChild(heading);
+
+            grouped[category].sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+            grouped[category].forEach(item => {
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'device-card';
+                card.innerHTML = `
+                    <div class="device-card-header">
+                        <div class="device-name">${item.name}</div>
+                        <div class="device-meta">
+                            <span><strong>${item.quantity}</strong> 在庫</span>
+                        </div>
+                    </div>
+                    <div class="device-meta">
+                        <span><strong>ID:</strong> ${item.barcode}</span>
+                        <span><strong>カテゴリー:</strong> ${item.displayCategory}</span>
+                        <span><strong>メーカー:</strong> ${item.manufacturer}</span>
+                    </div>
+                `;
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.device-card').forEach(node => node.classList.remove('active'));
+                    card.classList.add('active');
+                    selectProduct(item.id);
+                });
+                deviceList.appendChild(card);
+            });
+        });
+
+        if (deviceList.innerHTML === '') {
+            deviceList.innerHTML = '<div class="placeholder"><p>選択中のカテゴリに該当する製品はありません。</p></div>';
+        }
+    }
+
+    function selectProduct(productId) {
+        const product = inventoryItems.find(item => item.id === productId);
+        if (!product) return;
+        currentProduct = product;
+
+        productDetail.innerHTML = `
+            <div class="product-header">
+                <div class="product-info">
+                    <span class="category-label">${product.displayCategory}</span>
+                    <h1 class="product-name">${product.name}</h1>
+                </div>
+                <button id="clear-product" class="clear-btn">CLEAR</button>
+            </div>
+            <div class="product-tags">
+                <span class="tag maker">バーコードID: ${product.barcode}</span>
+                <span class="tag id">メーカー: ${product.manufacturer}</span>
+                <span class="tag id">現在庫: ${product.quantity}</span>
+            </div>
+            <div class="quantity-adjust">
+                <span class="section-label">Adjust Quantity</span>
+                <div class="quantity-controls">
+                    <button id="quantity-minus" class="quantity-btn">-</button>
+                    <input type="number" id="quantity" min="1" value="1" class="quantity-input">
+                    <button id="quantity-plus" class="quantity-btn">+</button>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('clear-product').addEventListener('click', clearProduct);
+        document.getElementById('quantity-minus').addEventListener('click', () => adjustQuantity(-1));
+        document.getElementById('quantity-plus').addEventListener('click', () => adjustQuantity(1));
+        document.getElementById('quantity').addEventListener('change', (e) => {
+            const val = parseInt(e.target.value);
+            if (val < 1) e.target.value = 1;
+        });
+    }
+
+    function clearProduct() {
+        currentProduct = null;
+        productDetail.innerHTML = `
+            <div class="placeholder">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+                <p>製品を選択してください</p>
+                <p class="description">左側の機器一覧から、バーコードを使わずに製品を選択できます。</p>
+            </div>
+        `;
+    }
+
+    function adjustQuantity(delta) {
+        const quantityElement = document.getElementById('quantity');
+        if (!quantityElement) return;
+        const current = parseInt(quantityElement.value) || 1;
+        quantityElement.value = Math.max(1, current + delta);
     }
 
     function searchByBarcode() {
@@ -80,99 +355,7 @@ document.addEventListener('DOMContentLoaded', function() {
             selectProduct(product.id);
             barcodeInput.value = '';
         })
-        .catch(error => {
-            showNotification('製品が見つかりません', 'out');
-            console.error('Error searching by barcode:', error);
-        });
-    }
-
-    function selectProduct(productId) {
-        const product = products.find(p => p.id === productId);
-        if (!product) return;
-
-        currentProduct = product;
-
-        // Update UI
-        productDetail.innerHTML = `
-            <div class="product-header">
-                <div class="product-info">
-                    <span class="category-label">${product.category}</span>
-                    <h1 class="product-name">${product.name}</h1>
-                </div>
-                <button id="clear-product" class="clear-btn">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M3 6h18"></path>
-                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                    </svg>
-                </button>
-            </div>
-
-            <div class="product-tags">
-                <span class="tag maker">Maker: ${product.manufacturer}</span>
-                <span class="tag id">ID: ${product.id}</span>
-            </div>
-
-            <div class="quantity-adjust">
-                <span class="section-label">Adjust Quantity</span>
-                <div class="quantity-controls">
-                    <button id="quantity-minus" class="quantity-btn">
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M5 12h14"></path>
-                        </svg>
-                    </button>
-                    <input type="number" id="quantity" min="1" value="1" class="quantity-input">
-                    <button id="quantity-plus" class="quantity-btn">
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M12 5v14"></path>
-                            <path d="M5 12h14"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Re-attach event listeners
-        document.getElementById('clear-product').addEventListener('click', clearProduct);
-        document.getElementById('quantity-minus').addEventListener('click', () => adjustQuantity(-1));
-        document.getElementById('quantity-plus').addEventListener('click', () => adjustQuantity(1));
-        document.getElementById('quantity').addEventListener('change', (e) => {
-            const val = parseInt(e.target.value);
-            if (val < 1) e.target.value = 1;
-        });
-
-        // Update quick button active state
-        quickBtns.forEach(btn => {
-            btn.classList.toggle('active', parseInt(btn.dataset.productId) === productId);
-        });
-    }
-
-    function clearProduct() {
-        currentProduct = null;
-        quantityInput.value = 1;
-
-        quickBtns.forEach(btn => btn.classList.remove('active'));
-
-        // Show placeholder
-        showPlaceholder();
-    }
-
-    function showPlaceholder() {
-        productDetail.innerHTML = `
-            <div class="placeholder">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
-                <p>スキャンしてください</p>
-                <p class="description">製品バーコードを読み取るか、左のリストから消耗品を選択してください</p>
-            </div>
-        `;
-    }
-
-    function adjustQuantity(delta) {
-        const current = parseInt(quantityInput.value);
-        const newVal = Math.max(1, current + delta);
-        quantityInput.value = newVal;
+        .catch(() => showNotification('製品が見つかりません', 'out'));
     }
 
     function updateStock(action) {
@@ -181,7 +364,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const quantity = parseInt(quantityInput.value);
+        const quantityElement = document.getElementById('quantity');
+        const quantity = Math.max(1, parseInt(quantityElement.value) || 1);
 
         fetch('/api/inventory/update', {
             method: 'POST',
@@ -191,10 +375,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.message) {
-                const actionStr = action === 'in' ? '入庫' : '出庫';
-                showNotification(`${currentProduct.name} を ${quantity}個、${actionStr}しました。`, action);
+                showNotification(`${currentProduct.name} を ${quantity}個 ${action === 'in' ? '入庫' : '出庫'}しました。`, action);
                 clearProduct();
-                barcodeInput.focus();
+                fetchInventory();
             } else {
                 showNotification(data.error, 'out');
             }
@@ -203,31 +386,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showNotification(message, type) {
-        const id = Date.now();
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
-        notification.innerHTML = `
-            <div class="notification-icon">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    ${type === 'in' ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22,4 12,14.01 9,11.01"></polyline>' : '<circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path>'}
-                </svg>
-            </div>
-            <span class="notification-message">${message}</span>
-        `;
-
+        notification.innerHTML = `<div class="notification-icon"></div><span class="notification-message">${message}</span>`;
         notifications.appendChild(notification);
-
-        // Animate in
-        setTimeout(() => notification.style.transform = 'translateX(0)', 10);
-
-        // Auto remove
-        setTimeout(() => {
-            notification.style.transform = 'translateX(200px)';
-            notification.style.opacity = '0';
-            setTimeout(() => notification.remove(), 300);
-        }, 5000);
+        setTimeout(() => notification.remove(), 4000);
     }
-
-    // Initialize placeholder
-    showPlaceholder();
 });
