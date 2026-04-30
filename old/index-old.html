@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PC機器在庫管理</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app">
+        <main class="main">
+            <!-- Quick Selection Section -->
+            <section class="quick-section">
+                <h2 class="section-title">Quick (消耗品)</h2>
+                <div class="quick-grid">
+                    <button class="quick-btn" data-product-id="1">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
+                            <path d="M13 13l6 6"></path>
+                        </svg>
+                        <span>マウス</span>
+                    </button>
+                    <button class="quick-btn" data-product-id="2">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 12l2 2 4-4"></path>
+                            <circle cx="7.5" cy="7.5" r=".5"></circle>
+                            <circle cx="16.5" cy="7.5" r=".5"></circle>
+                            <circle cx="7.5" cy="16.5" r=".5"></circle>
+                            <circle cx="16.5" cy="16.5" r=".5"></circle>
+                        </svg>
+                        <span>セキュリティワイヤー</span>
+                    </button>
+                    <button class="quick-btn" data-product-id="3">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect width="20" height="14" x="2" y="3" rx="2"></rect>
+                            <line x1="8" x2="16" y1="21" y2="21"></line>
+                            <line x1="12" x2="12" y1="17" y2="21"></line>
+                        </svg>
+                        <span>ノートPC</span>
+                    </button>
+                    <button class="quick-btn" data-product-id="4">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                            <line x1="16" x2="16" y1="2" y2="6"></line>
+                            <line x1="8" x2="8" y1="2" y2="6"></line>
+                            <circle cx="9" cy="9" r="2"></circle>
+                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                        </svg>
+                        <span>一体型PC</span>
+                    </button>
+                    <button class="quick-btn" data-product-id="5">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect width="20" height="12" x="2" y="3" rx="2"></rect>
+                            <line x1="8" x2="16" y1="21" y2="21"></line>
+                            <line x1="12" x2="12" y1="17" y2="21"></line>
+                        </svg>
+                        <span>モニター</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Info & Quantity Section -->
+            <section class="product-section" id="product-section">
+                <div class="barcode-input-container product-panel-barcode">
+                    <label class="input-label">Barcode Input / Search</label>
+                    <div class="input-group">
+                        <input
+                            type="text"
+                            id="barcode"
+                            placeholder="バーコードをスキャン または 検索..."
+                            class="barcode-input"
+                        />
+                        <button id="search-barcode" class="search-btn">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="product-detail" id="product-detail">
+                    <div class="product-header">
+                        <div class="product-info">
+                            <span class="category-label" id="category-label">カテゴリ</span>
+                            <h1 class="product-name" id="product-name">製品を選択してください</h1>
+                        </div>
+                        <button id="clear-product" class="clear-btn">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M3 6h18"></path>
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="product-tags" id="product-tags">
+                        <!-- Tags will be populated here -->
+                    </div>
+
+                    <!-- Quantity Adjustment -->
+                    <div class="quantity-adjust">
+                        <span class="section-label">Adjust Quantity</span>
+                        <div class="quantity-controls">
+                            <button id="quantity-minus" class="quantity-btn">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M5 12h14"></path>
+                                </svg>
+                            </button>
+                            <input type="number" id="quantity" min="1" value="1" class="quantity-input">
+                            <button id="quantity-plus" class="quantity-btn">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M12 5v14"></path>
+                                    <path d="M5 12h14"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Execution Section -->
+                <div class="execution-section">
+                    <button id="stock-in" class="action-btn in-btn">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22,4 12,14.01 9,11.01"></polyline>
+                        </svg>
+                        <span>入庫確定 (IN)</span>
+                    </button>
+                    <button id="stock-out" class="action-btn out-btn">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="m15 9-6 6"></path>
+                            <path d="m9 9 6 6"></path>
+                        </svg>
+                        <span>出庫確定 (OUT)</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Notifications -->
+        <div class="notifications" id="notifications"></div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span>System Version 1.0.0</span>
+            <span>Warehouse: WH-JP-001</span>
+        </footer>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>

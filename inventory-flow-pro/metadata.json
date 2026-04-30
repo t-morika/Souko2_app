@@ -1,0 +1,8 @@
+{
+  "name": "Inventory Flow Pro",
+  "description": "A high-contrast, tablet-optimized inventory management UI for PC equipment, featuring barcode scanning simulations and quick-access consumable tiles.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": []
+}

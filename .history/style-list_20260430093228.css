@@ -1,0 +1,149 @@
+.list-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow: hidden;
+}
+
+.list-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    padding-bottom: 0.5rem;
+}
+
+.device-card {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 1rem;
+    border: 2px solid #262626;
+    background-color: #171717;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
+}
+
+.device-card:hover {
+    transform: translateY(-2px);
+    border-color: #3b82f6;
+}
+
+.device-card.active {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: #3b82f6;
+}
+
+.device-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.device-name {
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.25;
+    color: #ffffff;
+}
+
+.device-meta {
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.78rem;
+    color: #9ca3af;
+}
+
+.device-meta span {
+    display: inline-flex;
+    gap: 0.5rem;
+}
+
+.device-meta strong {
+    color: #f5f5f5;
+    font-weight: 700;
+}
+
+.list-section-heading {
+    font-size: 0.85rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #d1d5db;
+    margin-top: 1rem;
+}
+
+.list-section-heading:first-of-type {
+    margin-top: 0;
+}
+
+.product-panel-barcode {
+    padding: 1.5rem 2rem 1rem;
+    border-bottom: 1px solid #262626;
+}
+
+.product-detail {
+    min-height: 22rem;
+}
+
+.app {
+    padding: 1.5rem 2rem;
+    max-width: calc(100vw - 2rem);
+    margin: 0 auto;
+}
+
+.main {
+    grid-template-columns: minmax(20rem, 30%) 1fr;
+}
+
+.list-section {
+    max-width: 30vw;
+}
+
+.placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #737373;
+    gap: 1rem;
+    padding: 2rem;
+}
+
+.placeholder .icon {
+    width: 6rem;
+    height: 6rem;
+    opacity: 0.12;
+}
+
+.placeholder p {
+    margin: 0;
+}
+
+.product-detail h2,
+.product-detail p,
+.product-detail .device-meta {
+    color: #f5f5f5;
+}
+
+@media (max-width: 1030px) {
+    .main {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .list-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .list-grid {
+        grid-template-columns: 1fr;
+    }
+}
