@@ -128,7 +128,7 @@ body {
 }
 
 .category-label {
-    font-size: 0.75rem;
+    font-size: 1rem;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.2em;
@@ -204,6 +204,7 @@ body {
 .quantity-btn {
     width: 4rem;
     height: 4rem;
+    font-size: 3rem;
     background-color: #262626;
     border: 2px solid #404040;
     border-radius: 1rem;
@@ -521,6 +522,10 @@ body {
     gap: 0.25rem;
     font-size: 0.78rem;
     color: #9ca3af;
+}
+
+.device-stock {
+    font-size: 1rem;
 }
 
 .device-meta span {

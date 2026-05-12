@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 card.innerHTML = `
                     <div class="device-card-header">
                         <div class="device-name">${item.name}</div>
-                        <div class="device-meta">
+                        <div class="device-meta device-stock">
                             <span><strong>${item.quantity}</strong> 在庫</span>
                         </div>
                     </div>
