@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentProduct = null;
     let currentCategoryFilter = 'all';
     let numpadRoot = null;
+    let isBarcodeNotFoundState = false;
 
     fetchInventory();
 
@@ -26,7 +27,6 @@ document.addEventListener('DOMContentLoaded', function() {
         root.innerHTML = `
             <div class="barcode-numpad-panel" role="dialog" aria-label="バーコード入力テンキー">
                 <div class="barcode-numpad-head">
-                    <span>テンキー入力</span>
                     <button type="button" class="numpad-close" data-key="close" aria-label="閉じる">×</button>
                 </div>
                 <div class="barcode-numpad-grid">
@@ -101,7 +101,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     buildBarcodeNumpad();
 
-    barcodeInput.addEventListener('focus', showBarcodeNumpad);
+    barcodeInput.addEventListener('focus', () => {
+        showBarcodeNumpad();
+        if (isBarcodeNotFoundState && !currentProduct) {
+            isBarcodeNotFoundState = false;
+            clearProduct();
+        }
+    });
     barcodeInput.addEventListener('touchstart', showBarcodeNumpad, { passive: true });
 
     document.addEventListener('mousedown', (event) => {
@@ -402,6 +408,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function selectProduct(productId) {
         const product = inventoryItems.find(item => item.id === productId);
         if (!product) return;
+        isBarcodeNotFoundState = false;
         currentProduct = product;
 
         productDetail.innerHTML = `
@@ -436,8 +443,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function clearProduct() {
-        currentProduct = null;
+    function renderDefaultPlaceholder() {
         productDetail.innerHTML = `
             <div class="placeholder">
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -447,6 +453,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 <p class="description">左側の機器一覧から、バーコードを使わずに製品を選択できます。</p>
             </div>
         `;
+    }
+
+    function renderBarcodeNotFoundPlaceholder() {
+        productDetail.innerHTML = `
+            <div class="placeholder">
+                <p>このバーコードは存在しません。もう一度正しく入力してください。</p>
+            </div>
+        `;
+    }
+
+    function clearProduct() {
+        currentProduct = null;
+        isBarcodeNotFoundState = false;
+        renderDefaultPlaceholder();
     }
 
     function adjustQuantity(delta) {
@@ -468,12 +488,23 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ barcode })
         })
-        .then(response => response.json())
+        .then(async (response) => {
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload?.error || 'Product not found');
+            }
+            return payload;
+        })
         .then(product => {
+            isBarcodeNotFoundState = false;
             selectProduct(product.id);
             barcodeInput.value = '';
         })
-        .catch(() => showNotification('製品が見つかりません', 'out'));
+        .catch(() => {
+            currentProduct = null;
+            isBarcodeNotFoundState = true;
+            renderBarcodeNotFoundPlaceholder();
+        });
     }
 
     function updateStock(action) {
