@@ -6,10 +6,32 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	_ "modernc.org/sqlite"
 )
+
+func normalizeBarcodeInput(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+
+	var mapped []rune
+	for _, r := range trimmed {
+		switch {
+		case r == '\u3000':
+			mapped = append(mapped, ' ')
+		case r >= '！' && r <= '～':
+			mapped = append(mapped, r-0xFEE0)
+		default:
+			mapped = append(mapped, r)
+		}
+	}
+
+	return strings.TrimSpace(string(mapped))
+}
 
 type Product struct {
 	ID           int    `json:"id"`
@@ -200,8 +222,14 @@ func searchByBarcode(c *gin.Context) {
 		return
 	}
 
+	normalizedBarcode := normalizeBarcodeInput(req.Barcode)
+	if normalizedBarcode == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Barcode is required"})
+		return
+	}
+
 	var product Product
-	err := db.QueryRow("SELECT id, category, manufacturer, name, barcode FROM products WHERE barcode = ?", req.Barcode).Scan(&product.ID, &product.Category, &product.Manufacturer, &product.Name, &product.Barcode)
+	err := db.QueryRow("SELECT id, category, manufacturer, name, barcode FROM products WHERE barcode = ?", normalizedBarcode).Scan(&product.ID, &product.Category, &product.Manufacturer, &product.Name, &product.Barcode)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 		return

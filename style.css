@@ -80,6 +80,92 @@ body {
     background-color: #404040;
 }
 
+.barcode-numpad {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    width: min(24rem, calc(100vw - 2rem));
+    aspect-ratio: 4 / 5;
+    z-index: 10000;
+    display: none;
+    pointer-events: none;
+}
+
+.barcode-numpad.visible {
+    display: block;
+    pointer-events: auto;
+}
+
+.barcode-numpad-panel {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(165deg, #575757 0%, #3f3f3f 100%);
+    border: 1px solid #8a8a8a;
+    border-radius: 1rem;
+    box-shadow: 0 22px 45px rgba(0, 0, 0, 0.45);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 0.5rem;
+    padding: 0.65rem;
+}
+
+.barcode-numpad-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #f5f5f5;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.barcode-numpad-head .numpad-close {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid #9a9a9a;
+    background: #4b4b4b;
+    color: #ffffff;
+    border-radius: 0.6rem;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.barcode-numpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.55rem;
+}
+
+.barcode-numpad-grid button,
+.barcode-numpad-foot .numpad-enter {
+    border: 1px solid #9f9f9f;
+    background: #5a5a5a;
+    color: #ffffff;
+    border-radius: 0.7rem;
+    font-size: 1.35rem;
+    font-weight: 800;
+    cursor: pointer;
+    min-height: 2.8rem;
+}
+
+.barcode-numpad-grid button:active,
+.barcode-numpad-foot .numpad-enter:active,
+.barcode-numpad-head .numpad-close:active {
+    transform: translateY(1px);
+    filter: brightness(0.94);
+}
+
+.barcode-numpad-grid .numpad-secondary {
+    background: #666666;
+}
+
+.barcode-numpad-foot .numpad-enter {
+    width: 100%;
+    background: #6a6a6a;
+    min-height: 3rem;
+    font-size: 1.1rem;
+}
+
 .icon {
     width: 1.5rem;
     height: 1.5rem;
@@ -424,6 +510,14 @@ body {
     .notifications {
         right: 1rem;
         bottom: 4rem;
+    }
+
+    .barcode-numpad {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        bottom: 0.75rem;
+        width: min(23rem, calc(100vw - 1rem));
     }
 }
 

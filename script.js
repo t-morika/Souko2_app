@@ -11,13 +11,120 @@ document.addEventListener('DOMContentLoaded', function() {
     let inventoryItems = [];
     let currentProduct = null;
     let currentCategoryFilter = 'all';
+    let numpadRoot = null;
 
     fetchInventory();
 
-    // If input is empty, use camera scanner (tablet); otherwise search text.
+    function buildBarcodeNumpad() {
+        if (numpadRoot) return;
+
+        const root = document.createElement('div');
+        root.id = 'barcode-numpad';
+        root.className = 'barcode-numpad';
+        root.setAttribute('aria-hidden', 'true');
+
+        root.innerHTML = `
+            <div class="barcode-numpad-panel" role="dialog" aria-label="バーコード入力テンキー">
+                <div class="barcode-numpad-head">
+                    <span>テンキー入力</span>
+                    <button type="button" class="numpad-close" data-key="close" aria-label="閉じる">×</button>
+                </div>
+                <div class="barcode-numpad-grid">
+                    <button type="button" data-key="7">7</button>
+                    <button type="button" data-key="8">8</button>
+                    <button type="button" data-key="9">9</button>
+                    <button type="button" data-key="4">4</button>
+                    <button type="button" data-key="5">5</button>
+                    <button type="button" data-key="6">6</button>
+                    <button type="button" data-key="1">1</button>
+                    <button type="button" data-key="2">2</button>
+                    <button type="button" data-key="3">3</button>
+                    <button type="button" class="numpad-secondary" data-key="clear">C</button>
+                    <button type="button" data-key="0">0</button>
+                    <button type="button" class="numpad-secondary" data-key="backspace">⌫</button>
+                </div>
+                <div class="barcode-numpad-foot">
+                    <button type="button" class="numpad-enter" data-key="enter">検索</button>
+                </div>
+            </div>
+        `;
+
+        root.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) return;
+
+            const key = target.dataset.key;
+            if (!key) return;
+
+            if (key === 'close') {
+                hideBarcodeNumpad();
+                return;
+            }
+
+            if (key === 'clear') {
+                barcodeInput.value = '';
+                barcodeInput.focus();
+                return;
+            }
+
+            if (key === 'backspace') {
+                barcodeInput.value = barcodeInput.value.slice(0, -1);
+                barcodeInput.focus();
+                return;
+            }
+
+            if (key === 'enter') {
+                hideBarcodeNumpad();
+                searchByBarcode();
+                return;
+            }
+
+            barcodeInput.value += key;
+            barcodeInput.focus();
+        });
+
+        document.body.appendChild(root);
+        numpadRoot = root;
+    }
+
+    function showBarcodeNumpad() {
+        if (!numpadRoot) return;
+        numpadRoot.classList.add('visible');
+        numpadRoot.setAttribute('aria-hidden', 'false');
+    }
+
+    function hideBarcodeNumpad() {
+        if (!numpadRoot) return;
+        numpadRoot.classList.remove('visible');
+        numpadRoot.setAttribute('aria-hidden', 'true');
+    }
+
+    buildBarcodeNumpad();
+
+    barcodeInput.addEventListener('focus', showBarcodeNumpad);
+    barcodeInput.addEventListener('touchstart', showBarcodeNumpad, { passive: true });
+
+    document.addEventListener('mousedown', (event) => {
+        if (!numpadRoot || !numpadRoot.classList.contains('visible')) return;
+        const target = event.target;
+        if (!(target instanceof Node)) return;
+        if (target === barcodeInput || barcodeInput.contains(target) || numpadRoot.contains(target)) return;
+        hideBarcodeNumpad();
+    });
+
+    document.addEventListener('touchstart', (event) => {
+        if (!numpadRoot || !numpadRoot.classList.contains('visible')) return;
+        const target = event.target;
+        if (!(target instanceof Node)) return;
+        if (target === barcodeInput || barcodeInput.contains(target) || numpadRoot.contains(target)) return;
+        hideBarcodeNumpad();
+    }, { passive: true });
+
+    // External barcode reader (keyboard wedge) or manual text search.
     searchBarcodeBtn.addEventListener('click', () => {
+        hideBarcodeNumpad();
         if (!barcodeInput.value.trim()) {
-            openCameraScanner();
+            showNotification('外付けバーコードリーダーで読み取り、またはコードを入力してください', 'out');
             return;
         }
         searchByBarcode();
@@ -30,6 +137,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     stockInBtn.addEventListener('click', () => updateStock('in'));
     stockOutBtn.addEventListener('click', () => updateStock('out'));
+
+    function normalizeBarcodeInput(value) {
+        if (!value) return '';
+        return value
+            .replace(/[\u3000]/g, ' ')
+            .replace(/[！-～]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
+            .trim();
+    }
 
     async function openCameraScanner() {
         // Secure context is required for camera on most devices.
@@ -342,8 +457,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function searchByBarcode() {
-        const barcode = barcodeInput.value.trim();
+        const barcode = normalizeBarcodeInput(barcodeInput.value);
         if (!barcode) return;
+
+        // Keep the visible input consistent with what is searched.
+        barcodeInput.value = barcode;
 
         fetch('/api/barcode/search', {
             method: 'POST',
