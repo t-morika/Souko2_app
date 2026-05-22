@@ -213,27 +213,56 @@ body {
     gap: 0.25rem;
 }
 
-.category-label {
-    font-size: 1rem;
+/* プルダウン用スタイル */
+/* カテゴリー・メーカー選択を縦並び＆大きく */
+.category-selects {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.select-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+/* プルダウンを大きく・ボタン風に */
+.category-select, .maker-select {
+    background-color: #232b3a;
+    border: 2px solid #3b82f6;
+    color: #fff;
+    border-radius: 0.8rem;
+    padding: 1.5rem 2.5rem;
+    font-size: 2.1rem;
+    min-width: 16rem;
     font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    color: #3b82f6;
+    margin-right: 0;
+    box-shadow: 0 2px 8px rgba(60,100,200,0.10), 0 1.5px 0 #1e293b;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    appearance: none;
+    cursor: pointer;
+    max-height: 3.5em;
+    overflow-y: auto;
 }
-
-.product-name {
-    font-size: 2.25rem;
-    font-weight: 900;
-    color: white;
-    line-height: 1.2;
-    margin: 0;
+.category-select:hover, .maker-select:hover, .category-select:focus, .maker-select:focus {
+    background-color: #3b82f6;
+    color: #fff;
+    border-color: #60a5fa;
+    outline: none;
 }
-
-.clear-btn {
-    padding: 0.5rem;
-    background-color: transparent;
-    border: none;
-    color: #737373;
+.category-select:disabled, .maker-select:disabled {
+    background-color: #262626;
+    color: #888;
+    border-color: #444;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+.category-select option, .maker-select option {
+    color: #222;
+    font-size: 1.7rem;
+    background: #fff;
+    max-height: 2.5em;
+}
     cursor: pointer;
     transition: color 0.2s;
 }

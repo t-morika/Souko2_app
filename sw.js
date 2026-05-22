@@ -3,16 +3,14 @@
    - Never caches API responses (keeps inventory consistent)
 */
 
-const CACHE_NAME = "inventory-app-shell-v1";
+const CACHE_NAME = "inventory-app-shell-v2";
 
 const SHELL_ASSETS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
   "/static/style.css",
-  "/static/style-list.css",
   "/static/script.js",
-  "/static/script-list.js",
   "/static/app-icon.svg"
 ];
 
