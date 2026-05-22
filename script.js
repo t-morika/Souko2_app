@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var productDetail = document.getElementById('product-detail');
     var stockInBtn = document.getElementById('stock-in');
     var stockOutBtn = document.getElementById('stock-out');
+    var stockDisposeBtn = document.getElementById('stock-dispose');
     var notifications = document.getElementById('notifications');
 
     var categories = [];
@@ -341,7 +342,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 quantity: quantity
             })
         }, function () {
-            showNotification((currentProduct.product.product_name || '-') + ' を ' + quantity + '個 ' + (action === 'in' ? '入庫' : '出庫') + 'しました。', action);
+            var actionLabel = '出庫';
+            if (action === 'in') actionLabel = '入庫';
+            if (action === 'dispose') actionLabel = '廃棄';
+            showNotification((currentProduct.product.product_name || '-') + ' を ' + quantity + '個 ' + actionLabel + 'しました。', action === 'in' ? 'in' : 'out');
             loadInventory(selectedCategory, selectedMaker);
         }, function (err) {
             var msg = (err && err.error) ? err.error : '更新に失敗しました';
@@ -398,6 +402,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     stockInBtn.addEventListener('click', function () { updateStock('in'); });
     stockOutBtn.addEventListener('click', function () { updateStock('out'); });
+    if (stockDisposeBtn) {
+        stockDisposeBtn.addEventListener('click', function () { updateStock('dispose'); });
+    }
 
     renderDefaultPlaceholder();
     loadCategories();

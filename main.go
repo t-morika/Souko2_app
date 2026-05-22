@@ -63,6 +63,29 @@ type InventoryItemDTO struct {
 	UpdatedAt      string     `json:"updated_at"`
 }
 
+func resolveEventByAction(action string) (eventID string, eventName string, delta int, err error) {
+	switch action {
+	case "in":
+		eventName = "入庫"
+		delta = 1
+	case "out":
+		eventName = "出庫"
+		delta = -1
+	case "dispose":
+		eventName = "廃棄"
+		delta = -1
+	default:
+		return "", "", 0, sql.ErrNoRows
+	}
+
+	err = db.QueryRow("SELECT id FROM event_master WHERE name = ?", eventName).Scan(&eventID)
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	return eventID, eventName, delta, nil
+}
+
 var db *sql.DB
 
 func initDB(dbPath string) {
@@ -323,7 +346,7 @@ func getInventory(c *gin.Context) {
 func updateInventory(c *gin.Context) {
 	var req struct {
 		ProductCD string `json:"product_cd"`
-		Action    string `json:"action"` // "in" or "out"
+		Action    string `json:"action"` // "in", "out" or "dispose"
 		Quantity  int    `json:"quantity"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -335,6 +358,20 @@ func updateInventory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "product_cd is required"})
 		return
 	}
+	if req.Quantity <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "quantity must be greater than zero"})
+		return
+	}
+
+	eventID, eventName, delta, eventErr := resolveEventByAction(req.Action)
+	if eventErr == sql.ErrNoRows {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action"})
+		return
+	}
+	if eventErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "event_master lookup failed"})
+		return
+	}
 
 	var currentQty int
 	err := db.QueryRow("SELECT COALESCE(stock_quantity, 0) FROM inventory WHERE product_cd = ?", req.ProductCD).Scan(&currentQty)
@@ -343,17 +380,9 @@ func updateInventory(c *gin.Context) {
 		return
 	}
 
-	var newQty int
-	if req.Action == "in" {
-		newQty = currentQty + req.Quantity
-	} else if req.Action == "out" {
-		newQty = currentQty - req.Quantity
-		if newQty < 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Insufficient stock"})
-			return
-		}
-	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action"})
+	newQty := currentQty + (delta * req.Quantity)
+	if newQty < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Insufficient stock"})
 		return
 	}
 
@@ -370,7 +399,11 @@ func updateInventory(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Inventory updated"})
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "Inventory updated",
+		"event_id":   eventID,
+		"event_name": eventName,
+	})
 }
 
 // searchByBarcode searches product by barcode

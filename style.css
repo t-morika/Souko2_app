@@ -368,7 +368,7 @@ body {
     background-color: rgba(23, 23, 23, 0.6);
     backdrop-filter: blur(10px);
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr auto;
     gap: 1.5rem;
 }
 
@@ -405,6 +405,23 @@ body {
 
 .out-btn:hover {
     background-color: #b91c1c;
+}
+
+.dispose-btn {
+    background-color: #374151;
+    box-shadow: 0 10px 15px -3px rgba(55, 65, 81, 0.35);
+}
+
+.dispose-btn:hover {
+    background-color: #4b5563;
+}
+
+.compact-btn {
+    width: 8.5rem;
+    height: 5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    line-height: 1.2;
 }
 
 .action-btn .icon {
