@@ -1,3 +1,4 @@
 .history/
 
-.inventory-test.db
+inventory_test.db
+inventory-app.exe
