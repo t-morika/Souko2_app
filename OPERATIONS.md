@@ -145,6 +145,16 @@ Get-NetTCPConnection -LocalPort 8080 -State Listen | Select-Object -First 1
 - 本番運用に切り替える場合は DB参照先（inventory_test.db）を明確に変更管理する
 - 更新前後で在庫値が元に戻るか、定期的に簡易検証する
 
+## 12.1 同時更新時の運用方針
+- 同一製品に対する同時操作は、画面上で連続クリックせず 1 操作ごとに通知表示を確認してから次操作を行う。
+- 複数端末運用時は、同一製品を同時に操作しないよう担当を分ける。
+- 在庫値に差異が出た場合は、直ちに `/api/barcode/search` で現在値を確認し、必要数だけ `in` または `out` で補正する。
+- 日次締め時にランダム3件以上の製品で在庫値を照合し、差異があれば運用ログへ記録する。
+
+## 12.2 異常系APIテスト結果（記録）
+- quantity不正: `quantity=0` / `quantity=-1` は `quantity must be greater than zero` を返すことを確認済み。
+- 不正product_cd: `inventory/update` は外部キー制約エラー、`barcode/search` は `Product not found` を返すことを確認済み。
+
 ## 13. 参考（現行実装の要点）
 - API定義: main.go
 - 画面構成: index.html

@@ -3,7 +3,7 @@
    - Never caches API responses (keeps inventory consistent)
 */
 
-const CACHE_NAME = "inventory-app-shell-v2";
+const CACHE_NAME = "inventory-app-shell-v3";
 
 const SHELL_ASSETS = [
   "/",

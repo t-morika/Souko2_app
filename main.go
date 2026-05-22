@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -44,6 +45,17 @@ type MakerDTO struct {
 	Name string `json:"name"`
 }
 
+type DepartmentDTO struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type StaffDTO struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	BusyoID string `json:"busyo_id"`
+}
+
 type ProductDTO struct {
 	ProductCD    string `json:"product_cd"`
 	ProductName  string `json:"product_name"`
@@ -57,10 +69,10 @@ type ProductDTO struct {
 }
 
 type InventoryItemDTO struct {
-	Product        ProductDTO `json:"product"`
-	StockQuantity  int        `json:"stock_quantity"`
-	CreatedAt      string     `json:"created_at"`
-	UpdatedAt      string     `json:"updated_at"`
+	Product       ProductDTO `json:"product"`
+	StockQuantity int        `json:"stock_quantity"`
+	CreatedAt     string     `json:"created_at"`
+	UpdatedAt     string     `json:"updated_at"`
 }
 
 func resolveEventByAction(action string) (eventID string, eventName string, delta int, err error) {
@@ -102,6 +114,146 @@ func initDB(dbPath string) {
 
 	// Enable foreign keys
 	_, _ = db.Exec("PRAGMA foreign_keys = ON")
+
+	if err := ensureStockLogSchema(db); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func ensureStockLogSchema(db *sql.DB) error {
+	var exists int
+	err := db.QueryRow("SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name='stock_log'").Scan(&exists)
+	if err != nil {
+		return err
+	}
+
+	if exists == 0 {
+		_, err = db.Exec(`
+			CREATE TABLE stock_log (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				created_at TIMESTAMP DEFAULT (DATETIME('now', '+9 hours')),
+				product_cd CHAR(13),
+				busyo_id CHAR(2),
+				kean_id VARCHAR(20),
+				event_id CHAR(2),
+				quantity INTEGER NOT NULL DEFAULT 1,
+				FOREIGN KEY (product_cd) REFERENCES products(product_cd),
+				FOREIGN KEY (busyo_id) REFERENCES booking_busyo(busyo_cd),
+				FOREIGN KEY (kean_id) REFERENCES booking_keanid(alias),
+				FOREIGN KEY (event_id) REFERENCES event_master(id)
+			)
+		`)
+		return err
+	}
+
+	rows, err := db.Query("PRAGMA table_info('stock_log')")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasQuantity := false
+	hasRequestID := false
+	idIsIntegerPK := false
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return err
+		}
+		if strings.EqualFold(name, "quantity") {
+			hasQuantity = true
+		}
+		if strings.EqualFold(name, "request_id") {
+			hasRequestID = true
+		}
+		if strings.EqualFold(name, "id") && pk == 1 {
+			upperType := strings.ToUpper(strings.TrimSpace(ctype))
+			if strings.Contains(upperType, "INT") {
+				idIsIntegerPK = true
+			}
+		}
+	}
+
+	if hasQuantity && idIsIntegerPK {
+		if !hasRequestID {
+			if _, err := db.Exec("ALTER TABLE stock_log ADD COLUMN request_id TEXT"); err != nil {
+				return err
+			}
+		}
+		_, err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS ux_stock_log_request_id ON stock_log(request_id) WHERE request_id IS NOT NULL")
+		return err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	if _, err := tx.Exec("PRAGMA foreign_keys = OFF"); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec("ALTER TABLE stock_log RENAME TO stock_log_old"); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(`
+		CREATE TABLE stock_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			created_at TIMESTAMP DEFAULT (DATETIME('now', '+9 hours')),
+			product_cd CHAR(13),
+			busyo_id CHAR(2),
+			kean_id VARCHAR(20),
+			event_id CHAR(2),
+			quantity INTEGER NOT NULL DEFAULT 1,
+			request_id TEXT,
+			FOREIGN KEY (product_cd) REFERENCES products(product_cd),
+			FOREIGN KEY (busyo_id) REFERENCES booking_busyo(busyo_cd),
+			FOREIGN KEY (kean_id) REFERENCES booking_keanid(alias),
+			FOREIGN KEY (event_id) REFERENCES event_master(id)
+		)
+	`); err != nil {
+		return err
+	}
+
+	insertSQL := `
+		INSERT INTO stock_log (created_at, product_cd, busyo_id, kean_id, event_id, quantity, request_id)
+		SELECT created_at, product_cd, busyo_id, kean_id, event_id, 1, NULL
+		FROM stock_log_old
+		ORDER BY created_at, rowid
+	`
+	if hasQuantity {
+		insertSQL = `
+			INSERT INTO stock_log (created_at, product_cd, busyo_id, kean_id, event_id, quantity, request_id)
+			SELECT created_at, product_cd, busyo_id, kean_id, event_id, COALESCE(quantity, 1), NULL
+			FROM stock_log_old
+			ORDER BY created_at, rowid
+		`
+	}
+
+	if _, err := tx.Exec(insertSQL); err != nil {
+		return fmt.Errorf("stock_log data migration failed: %w", err)
+	}
+
+	if _, err := tx.Exec("DROP TABLE stock_log_old"); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec("CREATE UNIQUE INDEX IF NOT EXISTS ux_stock_log_request_id ON stock_log(request_id) WHERE request_id IS NOT NULL"); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func main() {
@@ -137,6 +289,8 @@ func main() {
 	// New hierarchical API routes
 	r.GET("/api/categories", getCategories)
 	r.GET("/api/makers", getMakers)
+	r.GET("/api/departments", getDepartments)
+	r.GET("/api/staffs", getStaffs)
 	r.GET("/api/products", getProductsFiltered)
 	r.GET("/api/inventory", getInventory)
 	r.POST("/api/inventory/update", updateInventory)
@@ -218,6 +372,76 @@ func getMakers(c *gin.Context) {
 		makers = append(makers, maker)
 	}
 	c.JSON(http.StatusOK, makers)
+}
+
+// getDepartments returns department master list
+func getDepartments(c *gin.Context) {
+	rows, err := db.Query(`
+		SELECT COALESCE(busyo_cd, ''), COALESCE(name, '')
+		FROM booking_busyo
+		ORDER BY busyo_cd
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var departments []DepartmentDTO
+	for rows.Next() {
+		var d DepartmentDTO
+		if err := rows.Scan(&d.ID, &d.Name); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		departments = append(departments, d)
+	}
+
+	c.JSON(http.StatusOK, departments)
+}
+
+// getStaffs returns staff master list
+func getStaffs(c *gin.Context) {
+	departmentID := c.Query("department_id")
+
+	var rows *sql.Rows
+	var err error
+
+	if departmentID != "" {
+		rows, err = db.Query(`
+			SELECT DISTINCT COALESCE(k.alias, ''), COALESCE(k.name, ''), COALESCE(k.busyo_id, '')
+			FROM booking_keanid k
+			INNER JOIN booking_busyo b ON b.busyo_cd = k.busyo_id
+			WHERE COALESCE(k.alias, '') <> ''
+			  AND b.busyo_cd = ?
+			ORDER BY alias
+		`, departmentID)
+	} else {
+		rows, err = db.Query(`
+			SELECT DISTINCT COALESCE(k.alias, ''), COALESCE(k.name, ''), COALESCE(k.busyo_id, '')
+			FROM booking_keanid k
+			INNER JOIN booking_busyo b ON b.busyo_cd = k.busyo_id
+			WHERE COALESCE(k.alias, '') <> ''
+			ORDER BY alias
+		`)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var staffs []StaffDTO
+	for rows.Next() {
+		var s StaffDTO
+		if err := rows.Scan(&s.ID, &s.Name, &s.BusyoID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		staffs = append(staffs, s)
+	}
+
+	c.JSON(http.StatusOK, staffs)
 }
 
 // getProductsFiltered returns products filtered by category_id and/or maker_id
@@ -345,9 +569,12 @@ func getInventory(c *gin.Context) {
 // updateInventory updates stock quantity
 func updateInventory(c *gin.Context) {
 	var req struct {
-		ProductCD string `json:"product_cd"`
-		Action    string `json:"action"` // "in", "out" or "dispose"
-		Quantity  int    `json:"quantity"`
+		ProductCD    string `json:"product_cd"`
+		Action       string `json:"action"` // "in", "out" or "dispose"
+		Quantity     int    `json:"quantity"`
+		DepartmentID string `json:"department_id"`
+		StaffID      string `json:"staff_id"`
+		RequestID    string `json:"request_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -362,6 +589,10 @@ func updateInventory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "quantity must be greater than zero"})
 		return
 	}
+	if req.DepartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "department_id is required"})
+		return
+	}
 
 	eventID, eventName, delta, eventErr := resolveEventByAction(req.Action)
 	if eventErr == sql.ErrNoRows {
@@ -373,8 +604,48 @@ func updateInventory(c *gin.Context) {
 		return
 	}
 
+	var departmentCount int
+	err := db.QueryRow("SELECT COUNT(1) FROM booking_busyo WHERE busyo_cd = ?", req.DepartmentID).Scan(&departmentCount)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if departmentCount == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid department_id"})
+		return
+	}
+
+	if req.StaffID != "" {
+		var staffCount int
+		err = db.QueryRow(
+			`SELECT COUNT(1)
+			 FROM booking_keanid k
+			 INNER JOIN booking_busyo b ON b.busyo_cd = k.busyo_id
+			 WHERE k.alias = ? AND b.busyo_cd = ?`,
+			req.StaffID,
+			req.DepartmentID,
+		).Scan(&staffCount)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if staffCount == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "staff_id does not belong to department_id"})
+			return
+		}
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
 	var currentQty int
-	err := db.QueryRow("SELECT COALESCE(stock_quantity, 0) FROM inventory WHERE product_cd = ?", req.ProductCD).Scan(&currentQty)
+	err = tx.QueryRow("SELECT COALESCE(stock_quantity, 0) FROM inventory WHERE product_cd = ?", req.ProductCD).Scan(&currentQty)
 	if err != nil && err != sql.ErrNoRows {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -387,7 +658,7 @@ func updateInventory(c *gin.Context) {
 	}
 
 	// Insert or update inventory
-	_, err = db.Exec(`
+	_, err = tx.Exec(`
 		INSERT INTO inventory (product_cd, stock_quantity, created_at, updated_at)
 		VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 		ON CONFLICT(product_cd) DO UPDATE SET 
@@ -399,10 +670,51 @@ func updateInventory(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	var keanID interface{}
+	if req.StaffID != "" {
+		keanID = req.StaffID
+	} else {
+		keanID = nil
+	}
+
+	var requestID interface{}
+	if req.RequestID != "" {
+		requestID = req.RequestID
+	} else {
+		requestID = nil
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO stock_log (product_cd, busyo_id, kean_id, event_id, quantity, request_id)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, req.ProductCD, req.DepartmentID, keanID, eventID, req.Quantity, requestID)
+	if err != nil {
+		if req.RequestID != "" && strings.Contains(strings.ToLower(err.Error()), "unique") && strings.Contains(err.Error(), "stock_log.request_id") {
+			c.JSON(http.StatusOK, gin.H{
+				"message":       "Duplicate request ignored",
+				"event_id":      eventID,
+				"event_name":    eventName,
+				"department_id": req.DepartmentID,
+				"staff_id":      req.StaffID,
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"message":    "Inventory updated",
-		"event_id":   eventID,
-		"event_name": eventName,
+		"message":       "Inventory updated",
+		"event_id":      eventID,
+		"event_name":    eventName,
+		"department_id": req.DepartmentID,
+		"staff_id":      req.StaffID,
 	})
 }
 

@@ -8,16 +8,115 @@ document.addEventListener('DOMContentLoaded', function () {
     var stockInBtn = document.getElementById('stock-in');
     var stockOutBtn = document.getElementById('stock-out');
     var stockDisposeBtn = document.getElementById('stock-dispose');
+    var confirmModal = document.getElementById('confirm-modal');
+    var confirmMessage = document.getElementById('confirm-message');
+    var confirmNoBtn = document.getElementById('confirm-no');
+    var confirmYesBtn = document.getElementById('confirm-yes');
     var notifications = document.getElementById('notifications');
+    var listTabButtons = document.querySelectorAll('.list-tab-btn');
+    var listPaneMain = document.getElementById('list-pane-main');
+    var listPane1 = document.getElementById('list-pane-1');
+    var listPane2 = document.getElementById('list-pane-2');
 
     var categories = [];
     var makers = [];
+    var departments = [];
+    var staffs = [];
     var inventoryItems = [];
     var selectedCategory = '';
     var selectedMaker = '';
+    var selectedDepartment = '';
+    var selectedStaff = '';
     var currentProduct = null;
+    var pendingUpdate = null;
     var currentPhase = 'category';
+    var currentListTab = 'main';
     var numpadRoot = null;
+    var isSubmittingUpdate = false;
+
+    function setActiveListTab(tabName) {
+        currentListTab = tabName;
+
+        for (var i = 0; i < listTabButtons.length; i++) {
+            var btn = listTabButtons[i];
+            var isActive = btn.dataset && btn.dataset.listTab === tabName;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        }
+
+        if (listPaneMain) {
+            var mainActive = tabName === 'main';
+            listPaneMain.classList.toggle('active', mainActive);
+            listPaneMain.setAttribute('aria-hidden', mainActive ? 'false' : 'true');
+        }
+        if (listPane1) {
+            var pane1Active = tabName === 'list1';
+            listPane1.classList.toggle('active', pane1Active);
+            listPane1.setAttribute('aria-hidden', pane1Active ? 'false' : 'true');
+        }
+        if (listPane2) {
+            var pane2Active = tabName === 'list2';
+            listPane2.classList.toggle('active', pane2Active);
+            listPane2.setAttribute('aria-hidden', pane2Active ? 'false' : 'true');
+        }
+
+        if (tabName !== 'main') {
+            currentProduct = null;
+            renderDefaultPlaceholder();
+            updateRegistrationFlowState();
+        }
+    }
+
+    function createRequestId() {
+        return 'req-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    }
+
+    function getSelectedCategoryName() {
+        if (!selectedCategory) return '';
+        for (var i = 0; i < categories.length; i++) {
+            if (categories[i].id === selectedCategory) return categories[i].name || '';
+        }
+        return '';
+    }
+
+    function shouldShowStockStatusByCategory(categoryName) {
+        return categoryName === 'ノートPC' || categoryName === '一体型PC' || categoryName === 'モニター';
+    }
+
+    function getStockDisplayText(stockQuantity, categoryName) {
+        if (shouldShowStockStatusByCategory(categoryName)) {
+            return Number(stockQuantity) > 0 ? '在庫あり' : '在庫なし';
+        }
+        return String(stockQuantity);
+    }
+
+    function getFilteredStaffs() {
+        if (!selectedDepartment) return [];
+        return staffs.filter(function (staff) {
+            return (staff.busyo_id || '') === selectedDepartment;
+        });
+    }
+
+    function updateRegistrationFlowState() {
+        var hasProduct = !!currentProduct;
+        var hasDepartment = !!selectedDepartment;
+        var canChooseQuantity = hasProduct && hasDepartment;
+        var currentStock = hasProduct ? Number(currentProduct.stock_quantity || 0) : 0;
+        var canStockOut = canChooseQuantity && currentStock > 0;
+
+        var quantityInput = document.getElementById('quantity');
+        var minusBtn = document.getElementById('quantity-minus');
+        var plusBtn = document.getElementById('quantity-plus');
+
+        if (quantityInput) quantityInput.disabled = !canChooseQuantity;
+        if (minusBtn) minusBtn.disabled = !canChooseQuantity;
+        if (plusBtn) plusBtn.disabled = !canChooseQuantity;
+
+        var canRegister = canChooseQuantity;
+        if (stockInBtn) stockInBtn.disabled = !canRegister;
+        if (stockOutBtn) stockOutBtn.disabled = !canStockOut;
+        if (stockDisposeBtn) stockDisposeBtn.disabled = !canRegister;
+    }
 
     function requestJSON(url, options, onSuccess, onError) {
         fetch(url, options || {})
@@ -141,6 +240,11 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>';
     }
 
+    function updateSelectPlaceholderState(selectEl) {
+        if (!selectEl) return;
+        selectEl.classList.toggle('is-placeholder', !selectEl.value);
+    }
+
     function renderCategorySelect() {
         categorySelect.innerHTML = '';
         var defaultOpt = document.createElement('option');
@@ -155,9 +259,11 @@ document.addEventListener('DOMContentLoaded', function () {
             if (selectedCategory === cat.id) opt.selected = true;
             categorySelect.appendChild(opt);
         }
+        updateSelectPlaceholderState(categorySelect);
         // イベント
         categorySelect.onchange = function () {
             selectedCategory = categorySelect.value;
+            updateSelectPlaceholderState(categorySelect);
             selectedMaker = '';
             currentPhase = selectedCategory ? 'maker' : 'category';
             currentProduct = null;
@@ -180,6 +286,7 @@ document.addEventListener('DOMContentLoaded', function () {
         makerSelect.appendChild(defaultOpt);
         if (currentPhase === 'category' || !makers.length) {
             makerSelect.disabled = true;
+            updateSelectPlaceholderState(makerSelect);
             return;
         }
         makerSelect.disabled = false;
@@ -191,8 +298,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (selectedMaker === maker.id) opt.selected = true;
             makerSelect.appendChild(opt);
         }
+        updateSelectPlaceholderState(makerSelect);
         makerSelect.onchange = function () {
             selectedMaker = makerSelect.value;
+            updateSelectPlaceholderState(makerSelect);
             currentPhase = selectedMaker ? 'product' : 'maker';
             currentProduct = null;
             renderDefaultPlaceholder();
@@ -207,6 +316,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderDeviceList() {
         deviceList.innerHTML = '';
+        var selectedCategoryName = getSelectedCategoryName();
 
         if (currentPhase === 'category') {
             deviceList.innerHTML = '<div class="placeholder"><p>カテゴリを選択してください</p></div>';
@@ -226,15 +336,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 var card = document.createElement('button');
                 card.type = 'button';
                 card.className = 'device-card';
+                var stockDisplayText = getStockDisplayText(item.stock_quantity, selectedCategoryName);
                 card.innerHTML =
                     '<div class="device-card-header">' +
+                    '<div class="device-title-block">' +
                     '<div class="device-name">' + (item.product.product_name || '-') + '</div>' +
-                    '<div class="device-meta device-stock"><span><strong>' + item.stock_quantity + '</strong> 在庫</span></div>' +
+                    '<div class="device-barcode"><span class="device-barcode-label">バーコード</span>: <span class="device-barcode-value">' + (item.product.product_cd || '-') + '</span></div>' +
                     '</div>' +
-                    '<div class="device-meta">' +
-                    '<span><strong>コード:</strong> ' + (item.product.product_cd || '-') + '</span>' +
-                    '<span><strong>カテゴリー:</strong> ' + (item.product.category_name || '-') + '</span>' +
-                    '<span><strong>メーカー:</strong> ' + (item.product.maker_name || '-') + '</span>' +
+                    '<div class="device-meta device-stock"><span><strong>' + stockDisplayText + '</strong></span></div>' +
                     '</div>';
                 card.addEventListener('click', function () {
                     var cards = document.querySelectorAll('.device-card');
@@ -249,6 +358,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function selectProduct(item) {
         currentProduct = item;
+        var selectedCategoryName = getSelectedCategoryName();
+        var currentStockText = getStockDisplayText(item.stock_quantity, selectedCategoryName);
         productDetail.innerHTML =
             '<div class="product-header">' +
             '<div class="product-info">' +
@@ -260,14 +371,28 @@ document.addEventListener('DOMContentLoaded', function () {
             '<div class="product-tags">' +
             '<span class="tag maker">コード: ' + (item.product.product_cd || '-') + '</span>' +
             '<span class="tag id">メーカー: ' + (item.product.maker_name || '-') + '</span>' +
-            '<span class="tag id">現在庫: ' + item.stock_quantity + '</span>' +
+            '<span class="tag id">現在庫: ' + currentStockText + '</span>' +
+            '</div>' +
+            '<div class="event-input-section">' +
+            '<span class="section-label">部署・職員選択</span>' +
+            '<div class="event-select-grid">' +
+            '<div class="event-select-block">' +
+            '<label for="department-select" class="event-label">部署</label>' +
+            '<select id="department-select" class="event-select"></select>' +
+            '</div>' +
+            '<div class="event-select-block">' +
+            '<label for="staff-select" class="event-label">職員名</label>' +
+            '<select id="staff-select" class="event-select"></select>' +
+            '</div>' +
+            '</div>' +
             '</div>' +
             '<div class="quantity-adjust">' +
-            '<span class="section-label">Adjust Quantity</span>' +
+            '<span class="section-label">個数選択</span>' +
             '<div class="quantity-controls">' +
-            '<button id="quantity-minus" class="quantity-btn">-</button>' +
+            '<button id="quantity-minus" class="quantity-btn" type="button">-</button>' +
             '<input type="number" id="quantity" min="1" value="1" class="quantity-input">' +
-            '<button id="quantity-plus" class="quantity-btn">+</button>' +
+            '<button id="quantity-plus" class="quantity-btn" type="button">+</button>' +
+            '</div>' +
             '</div>' +
             '</div>';
 
@@ -287,6 +412,197 @@ document.addEventListener('DOMContentLoaded', function () {
             var value = parseInt(input.value, 10) || 1;
             input.value = value + 1;
         });
+
+        var quantityInput = document.getElementById('quantity');
+        if (quantityInput) {
+            quantityInput.addEventListener('input', function () {
+                var v = parseInt(quantityInput.value, 10);
+                if (!v || v < 1) quantityInput.value = 1;
+            });
+        }
+
+        renderDepartmentSelect();
+        renderStaffSelect();
+        updateRegistrationFlowState();
+    }
+
+    function renderDepartmentSelect() {
+        var departmentSelect = document.getElementById('department-select');
+        if (!departmentSelect) return;
+
+        departmentSelect.innerHTML = '';
+        departmentSelect.removeAttribute('size');
+        var defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '部署を選択してください';
+        departmentSelect.appendChild(defaultOpt);
+
+        for (var i = 0; i < departments.length; i++) {
+            var dep = departments[i];
+            var opt = document.createElement('option');
+            opt.value = dep.id;
+            opt.textContent = dep.name + ' (' + dep.id + ')';
+            if (selectedDepartment === dep.id) opt.selected = true;
+            departmentSelect.appendChild(opt);
+        }
+
+        departmentSelect.onchange = function () {
+            selectedDepartment = departmentSelect.value;
+            var filteredStaffs = getFilteredStaffs();
+            var staffStillValid = filteredStaffs.some(function (staff) {
+                return staff.id === selectedStaff;
+            });
+            if (!staffStillValid) selectedStaff = '';
+            renderStaffSelect();
+            updateRegistrationFlowState();
+        };
+    }
+
+    function renderStaffSelect() {
+        var staffSelect = document.getElementById('staff-select');
+        if (!staffSelect) return;
+
+        staffSelect.innerHTML = '';
+        var defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '職員を選択してください';
+        staffSelect.appendChild(defaultOpt);
+
+        var filteredStaffs = getFilteredStaffs();
+        var canChooseStaff = !!selectedDepartment;
+
+        for (var i = 0; i < filteredStaffs.length; i++) {
+            var staff = filteredStaffs[i];
+            var opt = document.createElement('option');
+            opt.value = staff.id;
+            opt.textContent = staff.name + ' (' + staff.id + ')';
+            if (selectedStaff === staff.id) opt.selected = true;
+            staffSelect.appendChild(opt);
+        }
+
+        staffSelect.disabled = !canChooseStaff;
+        if (!canChooseStaff) {
+            defaultOpt.textContent = '先に部署を選択してください';
+            staffSelect.removeAttribute('size');
+        } else if (filteredStaffs.length === 0) {
+            defaultOpt.textContent = 'この部署に所属する職員がいません';
+        } else {
+            staffSelect.removeAttribute('size');
+        }
+
+        staffSelect.onchange = function () {
+            selectedStaff = staffSelect.value;
+            updateRegistrationFlowState();
+        };
+    }
+
+    function loadDepartments() {
+        requestJSON('/api/departments', {}, function (data) {
+            departments = data || [];
+            renderDepartmentSelect();
+        }, function () {
+            showNotification('部署マスタの取得に失敗しました', 'out');
+        });
+    }
+
+    function loadStaffs() {
+        requestJSON('/api/staffs', {}, function (data) {
+            staffs = data || [];
+            renderStaffSelect();
+        }, function () {
+            showNotification('職員マスタの取得に失敗しました', 'out');
+        });
+    }
+
+    function closeConfirmModal() {
+        if (!confirmModal) return;
+        confirmModal.classList.remove('visible');
+        confirmModal.setAttribute('aria-hidden', 'true');
+        pendingUpdate = null;
+        isSubmittingUpdate = false;
+        if (confirmYesBtn) confirmYesBtn.disabled = false;
+        if (confirmNoBtn) confirmNoBtn.disabled = false;
+    }
+
+    function resetScreenState() {
+        selectedCategory = '';
+        selectedMaker = '';
+        selectedDepartment = '';
+        selectedStaff = '';
+        currentProduct = null;
+        currentPhase = 'category';
+        makers = [];
+        inventoryItems = [];
+
+        if (barcodeInput) barcodeInput.value = '';
+
+        renderCategorySelect();
+        renderMakerSelect();
+        renderDeviceList();
+        renderDefaultPlaceholder();
+        updateRegistrationFlowState();
+    }
+
+    function openConfirmModal(action) {
+        if (!currentProduct) {
+            showNotification('製品を選択してください', 'out');
+            return;
+        }
+
+        if (action === 'out' && Number(currentProduct.stock_quantity || 0) <= 0) {
+            showNotification('在庫なし（0在庫）のため出庫できません', 'out');
+            return;
+        }
+
+        var quantityInput = document.getElementById('quantity');
+        var quantity = quantityInput ? parseInt(quantityInput.value, 10) || 1 : 1;
+        quantity = Math.max(1, quantity);
+
+        var departmentSelect = document.getElementById('department-select');
+        var staffSelect = document.getElementById('staff-select');
+        var departmentId = departmentSelect ? departmentSelect.value : '';
+        var staffId = staffSelect ? staffSelect.value : '';
+
+        if (!departmentId) {
+            showNotification('部署を選択してください', 'out');
+            return;
+        }
+
+        selectedDepartment = departmentId;
+        selectedStaff = staffId;
+        updateRegistrationFlowState();
+
+        var actionLabel = '出庫';
+        if (action === 'in') actionLabel = '入庫';
+        if (action === 'dispose') actionLabel = '廃棄';
+
+        var depLabel = departmentSelect.options[departmentSelect.selectedIndex].text;
+        var staffLabel = staffId && staffSelect.selectedIndex >= 0 ? staffSelect.options[staffSelect.selectedIndex].text : '';
+
+        pendingUpdate = {
+            action: action,
+            quantity: quantity,
+            departmentId: departmentId,
+            staffId: staffId,
+            requestId: createRequestId()
+        };
+
+        if (confirmMessage) {
+            confirmMessage.innerHTML =
+                '製品: ' + (currentProduct.product.product_name || '-') + '<br>' +
+                'バーコード: ' + (currentProduct.product.product_cd || '-') + '<br>' +
+                'イベント: ' + actionLabel + '<br>' +
+                '数量: ' + quantity + '<br>' +
+                '部署: ' + depLabel + '<br>' +
+                (staffLabel ? '職員: ' + staffLabel + '<br>' : '') +
+                '<br>' +
+                '登録しますか？';
+        }
+
+        if (confirmModal) {
+            confirmModal.classList.add('visible');
+            confirmModal.setAttribute('aria-hidden', 'false');
+        }
     }
 
     function loadCategories() {
@@ -323,31 +639,30 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function updateStock(action) {
-        if (!currentProduct) {
-            showNotification('製品を選択してください', 'out');
-            return;
-        }
-
-        var quantityInput = document.getElementById('quantity');
-        var quantity = quantityInput ? parseInt(quantityInput.value, 10) || 1 : 1;
-        quantity = Math.max(1, quantity);
-
+    function updateStock(action, quantity, departmentId, staffId, requestId) {
         requestJSON('/api/inventory/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 product_cd: currentProduct.product.product_cd,
                 action: action,
-                quantity: quantity
+                quantity: quantity,
+                department_id: departmentId,
+                staff_id: staffId,
+                request_id: requestId
             })
         }, function () {
+            isSubmittingUpdate = false;
             var actionLabel = '出庫';
             if (action === 'in') actionLabel = '入庫';
             if (action === 'dispose') actionLabel = '廃棄';
             showNotification((currentProduct.product.product_name || '-') + ' を ' + quantity + '個 ' + actionLabel + 'しました。', action === 'in' ? 'in' : 'out');
-            loadInventory(selectedCategory, selectedMaker);
+            closeConfirmModal();
+            resetScreenState();
         }, function (err) {
+            isSubmittingUpdate = false;
+            if (confirmYesBtn) confirmYesBtn.disabled = false;
+            if (confirmNoBtn) confirmNoBtn.disabled = false;
             var msg = (err && err.error) ? err.error : '更新に失敗しました';
             showNotification(msg, 'out');
         });
@@ -372,6 +687,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     buildBarcodeNumpad();
+
+    for (var t = 0; t < listTabButtons.length; t++) {
+        listTabButtons[t].addEventListener('click', function (event) {
+            var target = event.currentTarget;
+            if (!target || !target.dataset) return;
+            setActiveListTab(target.dataset.listTab || 'main');
+        });
+    }
+    setActiveListTab('main');
 
     barcodeInput.addEventListener('focus', showBarcodeNumpad);
     barcodeInput.addEventListener('click', showBarcodeNumpad);
@@ -400,12 +724,46 @@ document.addEventListener('DOMContentLoaded', function () {
     barcodeInput.addEventListener('keypress', function (e) {
         if (e.key === 'Enter') searchByBarcode();
     });
-    stockInBtn.addEventListener('click', function () { updateStock('in'); });
-    stockOutBtn.addEventListener('click', function () { updateStock('out'); });
+    stockInBtn.addEventListener('click', function () { openConfirmModal('in'); });
+    stockOutBtn.addEventListener('click', function () { openConfirmModal('out'); });
     if (stockDisposeBtn) {
-        stockDisposeBtn.addEventListener('click', function () { updateStock('dispose'); });
+        stockDisposeBtn.addEventListener('click', function () { openConfirmModal('dispose'); });
     }
 
+    if (confirmNoBtn) {
+        confirmNoBtn.addEventListener('click', closeConfirmModal);
+    }
+    if (confirmYesBtn) {
+        confirmYesBtn.addEventListener('click', function () {
+            if (isSubmittingUpdate) {
+                return;
+            }
+            if (!pendingUpdate || !currentProduct) {
+                closeConfirmModal();
+                return;
+            }
+            isSubmittingUpdate = true;
+            confirmYesBtn.disabled = true;
+            if (confirmNoBtn) confirmNoBtn.disabled = true;
+            updateStock(
+                pendingUpdate.action,
+                pendingUpdate.quantity,
+                pendingUpdate.departmentId,
+                pendingUpdate.staffId,
+                pendingUpdate.requestId
+            );
+        });
+    }
+    if (confirmModal) {
+        confirmModal.addEventListener('click', function (e) {
+            if (e.target === confirmModal) closeConfirmModal();
+        });
+    }
+
+    loadDepartments();
+    loadStaffs();
+
+    updateRegistrationFlowState();
     renderDefaultPlaceholder();
     loadCategories();
 });
