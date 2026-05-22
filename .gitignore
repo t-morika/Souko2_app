@@ -1,1 +1,5 @@
 .history/
+
+# Local test databases
+inventory_test.db
+*.db
