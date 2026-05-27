@@ -368,6 +368,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var selectedCategoryName = getSelectedCategoryName();
         var productCategoryName = (item && item.product && item.product.category_name) ? item.product.category_name : selectedCategoryName;
         var currentStockText = getStockDisplayText(item.stock_quantity, productCategoryName);
+        var productInfoText = (item && item.product && item.product.product_info) ? item.product.product_info : '-';
         var shouldHideQuantitySelector = shouldHideQuantitySelectorByCategory(productCategoryName);
         var quantitySectionHtml = '';
         if (!shouldHideQuantitySelector) {
@@ -393,6 +394,10 @@ document.addEventListener('DOMContentLoaded', function () {
             '<span class="tag maker">コード: ' + (item.product.product_cd || '-') + '</span>' +
             '<span class="tag id">メーカー: ' + (item.product.maker_name || '-') + '</span>' +
             '<span class="tag id">現在庫: ' + currentStockText + '</span>' +
+            '</div>' +
+            '<div class="product-info-block">' +
+            '<span class="section-label">製品情報</span>' +
+            '<p class="product-info-text">' + productInfoText + '</p>' +
             '</div>' +
             '<div class="event-input-section">' +
             '<span class="section-label">部署・職員選択</span>' +
