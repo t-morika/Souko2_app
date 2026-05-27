@@ -21,6 +21,18 @@
 - 現在の実装は inventory.db ではなく inventory_test.db を参照します。
 
 ## 4. 起動手順
+### 4.0 事前チェック（推奨）
+`go run main.go` が `listen tcp :8080: bind: Only one usage ...` で失敗する場合は、先に8080ポート占有を解消します。
+
+```powershell
+$conn = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
+if ($conn) {
+  $pid = ($conn | Select-Object -First 1 -ExpandProperty OwningProcess)
+  Get-Process -Id $pid | Select-Object Id, ProcessName, Path
+  Stop-Process -Id $pid -Force
+}
+```
+
 ### 4.1 ソースから起動（推奨）
 1. 作業フォルダへ移動
 2. 以下を実行
@@ -109,8 +121,17 @@ Copy-Item .\inventory_test.db .\backup_inventory_test_$(Get-Date -Format yyyyMMd
 - 既存プロセスを停止後に再起動
 
 ```powershell
-Get-NetTCPConnection -LocalPort 8080 -State Listen | Select-Object -First 1
+$conn = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
+if ($conn) {
+  $pid = ($conn | Select-Object -First 1 -ExpandProperty OwningProcess)
+  Get-Process -Id $pid | Select-Object Id, ProcessName, Path
+  Stop-Process -Id $pid -Force
+}
+go run main.go
 ```
+
+補足:
+- 本環境での実測では、占有元は `go run` が残した `main` プロセスでした。
 
 ### 11.2 バーコード検索で 404
 症状:
