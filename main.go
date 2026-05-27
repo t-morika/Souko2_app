@@ -115,9 +115,49 @@ func initDB(dbPath string) {
 	// Enable foreign keys
 	_, _ = db.Exec("PRAGMA foreign_keys = ON")
 
+	if err := ensureProductsBarcodeUniqueness(db); err != nil {
+		log.Fatal(err)
+	}
+
 	if err := ensureStockLogSchema(db); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func ensureProductsBarcodeUniqueness(db *sql.DB) error {
+	rows, err := db.Query(`
+		SELECT COALESCE(product_cd, '')
+		FROM products
+		WHERE COALESCE(product_cd, '') <> ''
+		GROUP BY product_cd
+		HAVING COUNT(1) > 1
+		ORDER BY product_cd
+		LIMIT 5
+	`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var duplicated []string
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return err
+		}
+		duplicated = append(duplicated, code)
+	}
+
+	if len(duplicated) > 0 {
+		return fmt.Errorf("products.product_cd has duplicates; resolve before startup (examples: %s)", strings.Join(duplicated, ", "))
+	}
+
+	_, err = db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS ux_products_product_cd
+		ON products(product_cd)
+		WHERE COALESCE(product_cd, '') <> ''
+	`)
+	return err
 }
 
 func ensureStockLogSchema(db *sql.DB) error {
@@ -644,6 +684,36 @@ func updateInventory(c *gin.Context) {
 		_ = tx.Rollback()
 	}()
 
+	if req.RequestID != "" {
+		var reqDupCount int
+		err = tx.QueryRow("SELECT COUNT(1) FROM stock_log WHERE request_id = ?", req.RequestID).Scan(&reqDupCount)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if reqDupCount > 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"message":       "Duplicate request ignored",
+				"event_id":      eventID,
+				"event_name":    eventName,
+				"department_id": req.DepartmentID,
+				"staff_id":      req.StaffID,
+			})
+			return
+		}
+	}
+
+	var productExists int
+	err = tx.QueryRow("SELECT COUNT(1) FROM products WHERE product_cd = ?", req.ProductCD).Scan(&productExists)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if productExists == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product_cd"})
+		return
+	}
+
 	var currentQty int
 	err = tx.QueryRow("SELECT COALESCE(stock_quantity, 0) FROM inventory WHERE product_cd = ?", req.ProductCD).Scan(&currentQty)
 	if err != nil && err != sql.ErrNoRows {
@@ -654,20 +724,6 @@ func updateInventory(c *gin.Context) {
 	newQty := currentQty + (delta * req.Quantity)
 	if newQty < 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Insufficient stock"})
-		return
-	}
-
-	// Insert or update inventory
-	_, err = tx.Exec(`
-		INSERT INTO inventory (product_cd, stock_quantity, created_at, updated_at)
-		VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-		ON CONFLICT(product_cd) DO UPDATE SET 
-			stock_quantity = excluded.stock_quantity,
-			updated_at = CURRENT_TIMESTAMP
-	`, req.ProductCD, newQty)
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -685,12 +741,18 @@ func updateInventory(c *gin.Context) {
 		requestID = nil
 	}
 
-	_, err = tx.Exec(`
-		INSERT INTO stock_log (product_cd, busyo_id, kean_id, event_id, quantity, request_id)
+	stockLogRes, err := tx.Exec(`
+		INSERT OR IGNORE INTO stock_log (product_cd, busyo_id, kean_id, event_id, quantity, request_id)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`, req.ProductCD, req.DepartmentID, keanID, eventID, req.Quantity, requestID)
 	if err != nil {
-		if req.RequestID != "" && strings.Contains(strings.ToLower(err.Error()), "unique") && strings.Contains(err.Error(), "stock_log.request_id") {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.RequestID != "" {
+		affected, affErr := stockLogRes.RowsAffected()
+		if affErr == nil && affected == 0 {
 			c.JSON(http.StatusOK, gin.H{
 				"message":       "Duplicate request ignored",
 				"event_id":      eventID,
@@ -700,6 +762,18 @@ func updateInventory(c *gin.Context) {
 			})
 			return
 		}
+	}
+
+	// Insert or update inventory
+	_, err = tx.Exec(`
+		INSERT INTO inventory (product_cd, stock_quantity, created_at, updated_at)
+		VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT(product_cd) DO UPDATE SET 
+			stock_quantity = excluded.stock_quantity,
+			updated_at = CURRENT_TIMESTAMP
+	`, req.ProductCD, newQty)
+
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

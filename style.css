@@ -226,8 +226,9 @@ body {
 }
 
 .clear-btn {
-    padding: 0.3rem 0.7rem;
-    font-size: 0.7rem;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.78rem;
+    border-radius: 0.45rem;
 }
 
 /* プルダウン用スタイル */

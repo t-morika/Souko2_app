@@ -83,6 +83,10 @@ document.addEventListener('DOMContentLoaded', function () {
         return categoryName === 'ノートPC' || categoryName === '一体型PC' || categoryName === 'モニター';
     }
 
+    function shouldHideQuantitySelectorByCategory(categoryName) {
+        return shouldShowStockStatusByCategory(categoryName);
+    }
+
     function getStockDisplayText(stockQuantity, categoryName) {
         if (shouldShowStockStatusByCategory(categoryName)) {
             return Number(stockQuantity) > 0 ? '在庫あり' : '在庫なし';
@@ -102,7 +106,10 @@ document.addEventListener('DOMContentLoaded', function () {
         var hasDepartment = !!selectedDepartment;
         var canChooseQuantity = hasProduct && hasDepartment;
         var currentStock = hasProduct ? Number(currentProduct.stock_quantity || 0) : 0;
+        var currentCategoryName = hasProduct && currentProduct.product ? (currentProduct.product.category_name || '') : '';
+        var isUniqueBarcodeCategory = shouldShowStockStatusByCategory(currentCategoryName);
         var canStockOut = canChooseQuantity && currentStock > 0;
+        var canStockIn = canChooseQuantity && !(isUniqueBarcodeCategory && currentStock > 0);
 
         var quantityInput = document.getElementById('quantity');
         var minusBtn = document.getElementById('quantity-minus');
@@ -113,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (plusBtn) plusBtn.disabled = !canChooseQuantity;
 
         var canRegister = canChooseQuantity;
-        if (stockInBtn) stockInBtn.disabled = !canRegister;
+        if (stockInBtn) stockInBtn.disabled = !canStockIn;
         if (stockOutBtn) stockOutBtn.disabled = !canStockOut;
         if (stockDisposeBtn) stockDisposeBtn.disabled = !canRegister;
     }
@@ -359,7 +366,21 @@ document.addEventListener('DOMContentLoaded', function () {
     function selectProduct(item) {
         currentProduct = item;
         var selectedCategoryName = getSelectedCategoryName();
-        var currentStockText = getStockDisplayText(item.stock_quantity, selectedCategoryName);
+        var productCategoryName = (item && item.product && item.product.category_name) ? item.product.category_name : selectedCategoryName;
+        var currentStockText = getStockDisplayText(item.stock_quantity, productCategoryName);
+        var shouldHideQuantitySelector = shouldHideQuantitySelectorByCategory(productCategoryName);
+        var quantitySectionHtml = '';
+        if (!shouldHideQuantitySelector) {
+            quantitySectionHtml =
+                '<div class="quantity-adjust">' +
+                '<span class="section-label">個数選択</span>' +
+                '<div class="quantity-controls">' +
+                '<button id="quantity-minus" class="quantity-btn" type="button">-</button>' +
+                '<input type="number" id="quantity" min="1" value="1" class="quantity-input">' +
+                '<button id="quantity-plus" class="quantity-btn" type="button">+</button>' +
+                '</div>' +
+                '</div>';
+        }
         productDetail.innerHTML =
             '<div class="product-header">' +
             '<div class="product-info">' +
@@ -386,14 +407,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>' +
             '</div>' +
             '</div>' +
-            '<div class="quantity-adjust">' +
-            '<span class="section-label">個数選択</span>' +
-            '<div class="quantity-controls">' +
-            '<button id="quantity-minus" class="quantity-btn" type="button">-</button>' +
-            '<input type="number" id="quantity" min="1" value="1" class="quantity-input">' +
-            '<button id="quantity-plus" class="quantity-btn" type="button">+</button>' +
-            '</div>' +
-            '</div>' +
+            quantitySectionHtml +
             '</div>';
 
         document.getElementById('clear-product').addEventListener('click', function () {
@@ -401,17 +415,23 @@ document.addEventListener('DOMContentLoaded', function () {
             renderDefaultPlaceholder();
         });
 
-        document.getElementById('quantity-minus').addEventListener('click', function () {
-            var input = document.getElementById('quantity');
-            var value = parseInt(input.value, 10) || 1;
-            input.value = Math.max(1, value - 1);
-        });
+        var quantityMinusBtn = document.getElementById('quantity-minus');
+        if (quantityMinusBtn) {
+            quantityMinusBtn.addEventListener('click', function () {
+                var input = document.getElementById('quantity');
+                var value = parseInt(input.value, 10) || 1;
+                input.value = Math.max(1, value - 1);
+            });
+        }
 
-        document.getElementById('quantity-plus').addEventListener('click', function () {
-            var input = document.getElementById('quantity');
-            var value = parseInt(input.value, 10) || 1;
-            input.value = value + 1;
-        });
+        var quantityPlusBtn = document.getElementById('quantity-plus');
+        if (quantityPlusBtn) {
+            quantityPlusBtn.addEventListener('click', function () {
+                var input = document.getElementById('quantity');
+                var value = parseInt(input.value, 10) || 1;
+                input.value = value + 1;
+            });
+        }
 
         var quantityInput = document.getElementById('quantity');
         if (quantityInput) {
@@ -549,7 +569,16 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        if (action === 'out' && Number(currentProduct.stock_quantity || 0) <= 0) {
+        var currentStock = Number(currentProduct.stock_quantity || 0);
+        var currentCategoryName = currentProduct.product ? (currentProduct.product.category_name || '') : '';
+        var isUniqueBarcodeCategory = shouldShowStockStatusByCategory(currentCategoryName);
+
+        if (action === 'in' && isUniqueBarcodeCategory && currentStock > 0) {
+            showNotification('このカテゴリは在庫ありの場合、入庫できません', 'out');
+            return;
+        }
+
+        if (action === 'out' && currentStock <= 0) {
             showNotification('在庫なし（0在庫）のため出庫できません', 'out');
             return;
         }
