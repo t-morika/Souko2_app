@@ -313,8 +313,8 @@ func main() {
 	// Run as a local "tablet app" by default - use DebugMode to see route errors
 	gin.SetMode(gin.DebugMode)
 
-	// Use inventory_test.db instead of inventory.db
-	initDB(filepath.Join(baseDir, "inventory_test.db"))
+	// Use inventory.db as the default local DB
+	initDB(filepath.Join(baseDir, "inventory.db"))
 	defer db.Close()
 
 	r := gin.Default()

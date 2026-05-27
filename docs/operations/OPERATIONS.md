@@ -15,10 +15,10 @@
 - Go が利用可能であること
 - 8080番ポートが未使用、または既存プロセスを停止済みであること
 - DBファイルが存在すること
-  - 運用DB: inventory_test.db
+  - 運用DB: inventory.db
 
 注意:
-- 現在の実装は inventory.db ではなく inventory_test.db を参照します。
+- 現在の実装は inventory.db を参照します。
 
 ## 4. 起動手順
 ### 4.0 事前チェック（推奨）
@@ -63,7 +63,7 @@ go run main.go
 6. 通知メッセージを確認
 
 ## 6.1 入出庫イベント仕様（event_master連携）
-在庫更新イベントは `inventory_test.db` の `event_master` を参照して処理されます。
+在庫更新イベントは `inventory.db` の `event_master` を参照して処理されます。
 
 - 入庫: event_master.name = 入庫（id=01）
 - 出庫: event_master.name = 出庫（id=02）
@@ -97,12 +97,12 @@ Invoke-WebRequest "http://localhost:8080/api/inventory?category_id=01&maker_id=0
 ## 9. データ運用
 ### 9.1 バックアップ
 ```powershell
-Copy-Item .\inventory_test.db .\backup_inventory_test_$(Get-Date -Format yyyyMMdd_HHmmss).db
+Copy-Item .\inventory.db .\backup_inventory_$(Get-Date -Format yyyyMMdd_HHmmss).db
 ```
 
 ### 9.2 リストア
 1. アプリ停止
-2. バックアップファイルを inventory_test.db に戻す
+2. バックアップファイルを inventory.db に戻す
 3. アプリ再起動
 
 ## 10. キャッシュ/表示不整合時の対応
@@ -163,7 +163,7 @@ go run main.go
 
 ## 12. 運用上の注意
 - DBファイルを直接編集する場合は必ず停止中に実施
-- 本番運用に切り替える場合は DB参照先（inventory_test.db）を明確に変更管理する
+- 本番運用に切り替える場合は DB参照先（inventory.db）を明確に変更管理する
 - 更新前後で在庫値が元に戻るか、定期的に簡易検証する
 
 ## 12.1 同時更新時の運用方針
