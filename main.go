@@ -380,7 +380,6 @@ func getMakers(c *gin.Context) {
 	var err error
 
 	if categoryID != "" {
-		// Get makers for a specific category
 		rows, err = db.Query(`
 			SELECT DISTINCT m.id, m.name 
 			FROM maker m
@@ -389,7 +388,6 @@ func getMakers(c *gin.Context) {
 			ORDER BY m.id
 		`, categoryID)
 	} else {
-		// Get all makers
 		rows, err = db.Query(`
 			SELECT id, name FROM maker 
 			ORDER BY id
