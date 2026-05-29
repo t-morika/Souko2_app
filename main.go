@@ -100,6 +100,8 @@ func resolveEventByAction(action string) (eventID string, eventName string, delt
 
 var db *sql.DB
 
+const defaultSharedDBPath = `C:\Users\ks24.m-takahashi\Desktop\inventory.db`
+
 func initDB(dbPath string) {
 	var err error
 	db, err = sql.Open("sqlite", dbPath)
@@ -122,6 +124,19 @@ func initDB(dbPath string) {
 	if err := ensureStockLogSchema(db); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func resolveDBPath(baseDir string) string {
+	if dbPath := strings.TrimSpace(os.Getenv("INVENTORY_DB_PATH")); dbPath != "" {
+		return dbPath
+	}
+
+	if dbDir := strings.TrimSpace(os.Getenv("INVENTORY_DB_DIR")); dbDir != "" {
+		return filepath.Join(dbDir, "inventory.db")
+	}
+
+	_ = baseDir
+	return defaultSharedDBPath
 }
 
 func ensureProductsBarcodeUniqueness(db *sql.DB) error {
@@ -313,8 +328,8 @@ func main() {
 	// Run as a local "tablet app" by default - use DebugMode to see route errors
 	gin.SetMode(gin.DebugMode)
 
-	// Use inventory.db as the default local DB
-	initDB(filepath.Join(baseDir, "inventory.db"))
+	// Use the shared inventory.db path, preferring environment-based overrides.
+	initDB(resolveDBPath(baseDir))
 	defer db.Close()
 
 	r := gin.Default()
@@ -380,6 +395,7 @@ func getMakers(c *gin.Context) {
 	var err error
 
 	if categoryID != "" {
+		// Get makers for a specific category
 		rows, err = db.Query(`
 			SELECT DISTINCT m.id, m.name 
 			FROM maker m
@@ -388,6 +404,7 @@ func getMakers(c *gin.Context) {
 			ORDER BY m.id
 		`, categoryID)
 	} else {
+		// Get all makers
 		rows, err = db.Query(`
 			SELECT id, name FROM maker 
 			ORDER BY id

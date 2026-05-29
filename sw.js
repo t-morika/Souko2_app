@@ -3,7 +3,7 @@
    - Never caches API responses (keeps inventory consistent)
 */
 
-const CACHE_NAME = "inventory-app-shell-v3";
+const CACHE_NAME = "inventory-app-shell-v4";
 
 const SHELL_ASSETS = [
   "/",
@@ -52,6 +52,25 @@ self.addEventListener("fetch", (event) => {
         } catch {
           const cached = await caches.match(req);
           return cached || (await caches.match("/"));
+        }
+      })()
+    );
+    return;
+  }
+
+  // For CSS/JS, prefer network to avoid stale first render after deployments.
+  if (url.pathname === "/static/style.css" || url.pathname === "/static/script.js") {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(CACHE_NAME);
+        try {
+          const fresh = await fetch(req, { cache: "no-store" });
+          cache.put(req, fresh.clone());
+          return fresh;
+        } catch {
+          const cached = await caches.match(req);
+          if (cached) return cached;
+          return fetch(req);
         }
       })()
     );

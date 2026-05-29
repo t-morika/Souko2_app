@@ -12,19 +12,25 @@ Go + Gin + SQLite を使用したタブレット向けPC機器在庫管理Webア
 ## 起動方法
 
 1. Goがインストールされていることを確認してください。
-2. 依存関係をインストール:
+2. 共有DBの参照先を確認します。このリポジトリでは、開発・本番の起動入口を `start-inventory-server.cmd` に統一します。
+3. 依存関係をインストール:
    ```
    go mod tidy
    ```
-3. アプリをビルド:
+4. アプリをビルド:
    ```
    go build -o inventory-app
    ```
-4. 実行:
+5. 実行:
    ```
-   ./inventory-app
+  .\start-inventory-server.cmd
    ```
-5. ブラウザでアクセス: http://localhost:8080
+6. ブラウザでアクセス: http://localhost:8080
+
+補足:
+- バッチ実行時は `C:\Users\ks24.m-takahashi\Desktop\inventory.db` を参照します。
+- 直接 `go run main.go` する場合は、同じ環境変数を自分で設定してください。
+- 初期表示で旧CSSが出る事象を防ぐため、`sw.js` は `style.css` / `script.js` を network-first で取得します（オフライン時のみキャッシュ使用）。
 
 ## 技術仕様
 
@@ -59,8 +65,22 @@ Go + Gin + SQLite を使用したタブレット向けPC機器在庫管理Webア
 
 ### データベースファイルの場所
 
-- デフォルト: `./inventory.db` (実行ファイルと同じディレクトリ)
-- 環境変数 `DB_PATH` でカスタムパスを指定可能
+- 優先1: 環境変数 `INVENTORY_DB_PATH` でDBファイルを直接指定
+- 優先2: 環境変数 `INVENTORY_DB_DIR` 配下の `inventory.db`
+- 優先3: `C:\Users\ks24.m-takahashi\Desktop\inventory.db` (既定値)
+
+開発時に共有フォルダを使う場合の例:
+
+```powershell
+$env:INVENTORY_DB_DIR = 'C:\Users\ks24.m-takahashi\Desktop'
+go run main.go
+```
+
+推奨起動方法:
+
+```powershell
+.\start-inventory-server.cmd
+```
 
 ### 初期データ
 
@@ -138,7 +158,7 @@ cp inventory.db.backup inventory.db
 
 # または新規作成（サンプルデータ再挿入）
 rm inventory.db
-./inventory-app
+.\start-inventory-server.cmd
 ```
 
 #### バーコード重複エラー

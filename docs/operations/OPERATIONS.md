@@ -18,7 +18,8 @@
   - 運用DB: inventory.db
 
 注意:
-- 現在の実装は inventory.db を参照します。
+- 現在の実装は、`INVENTORY_DB_PATH` -> `INVENTORY_DB_DIR/inventory.db` -> `./inventory.db` の順で参照します。
+- 開発時に共有フォルダを使う場合は、`INVENTORY_DB_DIR=C:\Users\ks24.m-takahashi\Desktop` を設定します。
 
 ## 4. 起動手順
 ### 4.0 事前チェック（推奨）
@@ -33,15 +34,19 @@ if ($conn) {
 }
 ```
 
-### 4.1 ソースから起動（推奨）
+### 4.1 起動方法（推奨）
 1. 作業フォルダへ移動
 2. 以下を実行
 
 ```powershell
-go run main.go
+.\start-inventory-server.cmd
 ```
 
 3. コンソールに `Server starting on http://localhost:8080` が表示されることを確認
+
+補足:
+- このバッチは `C:\Users\ks24.m-takahashi\Desktop\inventory.db` を明示的に参照します。
+- 直接 `go run main.go` する場合は、同じ環境変数を手動設定してください。
 
 ### 4.2 実行ファイルから起動
 ```powershell
@@ -103,7 +108,7 @@ Copy-Item .\inventory.db .\backup_inventory_$(Get-Date -Format yyyyMMdd_HHmmss).
 ### 9.2 リストア
 1. アプリ停止
 2. バックアップファイルを inventory.db に戻す
-3. アプリ再起動
+3. `start-inventory-server.cmd` でアプリ再起動
 
 ## 10. キャッシュ/表示不整合時の対応
 本アプリは Service Worker を使用します。画面が古い場合は以下を実施します。
@@ -127,7 +132,7 @@ if ($conn) {
   Get-Process -Id $pid | Select-Object Id, ProcessName, Path
   Stop-Process -Id $pid -Force
 }
-go run main.go
+.\start-inventory-server.cmd
 ```
 
 補足:
@@ -164,6 +169,7 @@ go run main.go
 ## 12. 運用上の注意
 - DBファイルを直接編集する場合は必ず停止中に実施
 - 本番運用に切り替える場合は DB参照先（inventory.db）を明確に変更管理する
+- DB参照先を切り替える場合は `INVENTORY_DB_PATH` または `INVENTORY_DB_DIR` のどちらを使うかを統一する
 - 更新前後で在庫値が元に戻るか、定期的に簡易検証する
 
 ## 12.1 同時更新時の運用方針
