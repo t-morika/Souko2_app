@@ -86,6 +86,13 @@ func resolveEventByAction(action string) (eventID string, eventName string, delt
 	case "dispose":
 		eventName = "廃棄"
 		delta = -1
+	case "purchase":
+		delta = 1
+		err = db.QueryRow("SELECT id, name FROM event_master WHERE id = ?", "04").Scan(&eventID, &eventName)
+		if err != nil {
+			return "", "", 0, err
+		}
+		return eventID, eventName, delta, nil
 	default:
 		return "", "", 0, sql.ErrNoRows
 	}
@@ -625,7 +632,7 @@ func getInventory(c *gin.Context) {
 func updateInventory(c *gin.Context) {
 	var req struct {
 		ProductCD    string `json:"product_cd"`
-		Action       string `json:"action"` // "in", "out" or "dispose"
+		Action       string `json:"action"` // "in", "out", "dispose" or "purchase"
 		Quantity     int    `json:"quantity"`
 		DepartmentID string `json:"department_id"`
 		StaffID      string `json:"staff_id"`
@@ -644,9 +651,14 @@ func updateInventory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "quantity must be greater than zero"})
 		return
 	}
-	if req.DepartmentID == "" {
+	requiresDepartment := req.Action != "purchase"
+	if requiresDepartment && req.DepartmentID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "department_id is required"})
 		return
+	}
+	if !requiresDepartment {
+		req.DepartmentID = ""
+		req.StaffID = ""
 	}
 
 	eventID, eventName, delta, eventErr := resolveEventByAction(req.Action)
@@ -659,18 +671,21 @@ func updateInventory(c *gin.Context) {
 		return
 	}
 
-	var departmentCount int
-	err := db.QueryRow("SELECT COUNT(1) FROM booking_busyo WHERE busyo_cd = ?", req.DepartmentID).Scan(&departmentCount)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	if departmentCount == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid department_id"})
-		return
+	var err error
+	if requiresDepartment {
+		var departmentCount int
+		err = db.QueryRow("SELECT COUNT(1) FROM booking_busyo WHERE busyo_cd = ?", req.DepartmentID).Scan(&departmentCount)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if departmentCount == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid department_id"})
+			return
+		}
 	}
 
-	if req.StaffID != "" {
+	if requiresDepartment && req.StaffID != "" {
 		var staffCount int
 		err = db.QueryRow(
 			`SELECT COUNT(1)
@@ -749,6 +764,13 @@ func updateInventory(c *gin.Context) {
 		keanID = nil
 	}
 
+	var busyoID interface{}
+	if req.DepartmentID != "" {
+		busyoID = req.DepartmentID
+	} else {
+		busyoID = nil
+	}
+
 	var requestID interface{}
 	if req.RequestID != "" {
 		requestID = req.RequestID
@@ -759,7 +781,7 @@ func updateInventory(c *gin.Context) {
 	stockLogRes, err := tx.Exec(`
 		INSERT OR IGNORE INTO stock_log (product_cd, busyo_id, kean_id, event_id, quantity, request_id)
 		VALUES (?, ?, ?, ?, ?, ?)
-	`, req.ProductCD, req.DepartmentID, keanID, eventID, req.Quantity, requestID)
+	`, req.ProductCD, busyoID, keanID, eventID, req.Quantity, requestID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

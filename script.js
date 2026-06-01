@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var stockInBtn = document.getElementById('stock-in');
     var stockOutBtn = document.getElementById('stock-out');
     var stockDisposeBtn = document.getElementById('stock-dispose');
+    var stockPurchaseBtn = document.getElementById('stock-purchase');
+    var executionSection = document.querySelector('.execution-section');
     var confirmModal = document.getElementById('confirm-modal');
     var confirmMessage = document.getElementById('confirm-message');
     var confirmNoBtn = document.getElementById('confirm-no');
@@ -33,6 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var currentListTab = 'main';
     var numpadRoot = null;
     var isSubmittingUpdate = false;
+    var isPurchaseMode = false;
 
     function setActiveListTab(tabName) {
         currentListTab = tabName;
@@ -101,15 +104,65 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function getActionLabel(action) {
+        if (action === 'in') return '入庫';
+        if (action === 'out') return '出庫';
+        if (action === 'dispose') return '廃棄';
+        if (action === 'purchase') return '在庫追加';
+        return action || '';
+    }
+
+    function bindPurchaseModeButton() {
+        var purchaseModeToggleBtn = document.getElementById('purchase-mode-toggle');
+        if (!purchaseModeToggleBtn) return;
+
+        purchaseModeToggleBtn.setAttribute('aria-pressed', isPurchaseMode ? 'true' : 'false');
+        purchaseModeToggleBtn.classList.toggle('active', isPurchaseMode);
+        purchaseModeToggleBtn.textContent = isPurchaseMode ? '購入モード中（解除）' : '購入モード';
+        purchaseModeToggleBtn.onclick = function () {
+            setPurchaseMode(!isPurchaseMode);
+        };
+    }
+
+    function setPurchaseMode(enabled) {
+        isPurchaseMode = !!enabled;
+        if (isPurchaseMode) {
+            selectedDepartment = '';
+            selectedStaff = '';
+            setActiveListTab('main');
+        }
+
+        if (currentProduct) {
+            selectProduct(currentProduct);
+        } else {
+            renderDefaultPlaceholder();
+        }
+        updateRegistrationFlowState();
+
+        if (isPurchaseMode && barcodeInput) {
+            setTimeout(function () {
+                barcodeInput.focus();
+            }, 0);
+        }
+    }
+
+    function setActionButtonVisible(button, visible) {
+        if (!button) return;
+        button.hidden = !visible;
+        button.classList.toggle('is-hidden', !visible);
+    }
+
     function updateRegistrationFlowState() {
         var hasProduct = !!currentProduct;
         var hasDepartment = !!selectedDepartment;
-        var canChooseQuantity = hasProduct && hasDepartment;
+        var canChooseQuantity = hasProduct && (isPurchaseMode || hasDepartment);
         var currentStock = hasProduct ? Number(currentProduct.stock_quantity || 0) : 0;
         var currentCategoryName = hasProduct && currentProduct.product ? (currentProduct.product.category_name || '') : '';
         var isUniqueBarcodeCategory = shouldShowStockStatusByCategory(currentCategoryName);
-        var canStockOut = canChooseQuantity && currentStock > 0;
-        var canStockIn = canChooseQuantity && !(isUniqueBarcodeCategory && currentStock > 0);
+        var canStockOut = !isPurchaseMode && canChooseQuantity && currentStock > 0;
+        var canStockIn = !isPurchaseMode && canChooseQuantity && !(isUniqueBarcodeCategory && currentStock > 0);
+        var canDispose = !isPurchaseMode && canChooseQuantity;
+        var canPurchase = isPurchaseMode && hasProduct;
 
         var quantityInput = document.getElementById('quantity');
         var minusBtn = document.getElementById('quantity-minus');
@@ -119,10 +172,16 @@ document.addEventListener('DOMContentLoaded', function () {
         if (minusBtn) minusBtn.disabled = !canChooseQuantity;
         if (plusBtn) plusBtn.disabled = !canChooseQuantity;
 
-        var canRegister = canChooseQuantity;
         if (stockInBtn) stockInBtn.disabled = !canStockIn;
         if (stockOutBtn) stockOutBtn.disabled = !canStockOut;
-        if (stockDisposeBtn) stockDisposeBtn.disabled = !canRegister;
+        if (stockDisposeBtn) stockDisposeBtn.disabled = !canDispose;
+        if (stockPurchaseBtn) stockPurchaseBtn.disabled = !canPurchase;
+
+        setActionButtonVisible(stockInBtn, !isPurchaseMode);
+        setActionButtonVisible(stockOutBtn, !isPurchaseMode);
+        setActionButtonVisible(stockDisposeBtn, !isPurchaseMode);
+        setActionButtonVisible(stockPurchaseBtn, isPurchaseMode);
+        if (executionSection) executionSection.classList.toggle('purchase-mode', isPurchaseMode);
     }
 
     function requestJSON(url, options, onSuccess, onError) {
@@ -244,7 +303,9 @@ document.addEventListener('DOMContentLoaded', function () {
             '</svg>' +
             '<p>製品を選択してください</p>' +
             '<p class="description">左側の機器一覧から、製品を選択してください。</p>' +
+            '<button id="purchase-mode-toggle" class="purchase-mode-btn" type="button" aria-pressed="false">購入モード</button>' +
             '</div>';
+        bindPurchaseModeButton();
     }
 
     function updateSelectPlaceholderState(selectEl) {
@@ -371,6 +432,37 @@ document.addEventListener('DOMContentLoaded', function () {
         var productInfoText = (item && item.product && item.product.product_info) ? item.product.product_info : '-';
         var shouldHideQuantitySelector = shouldHideQuantitySelectorByCategory(productCategoryName);
         var quantitySectionHtml = '';
+        var eventInputSectionHtml = '';
+        var modeBannerHtml = '';
+
+        if (isPurchaseMode) {
+            modeBannerHtml =
+                '<div class="purchase-mode-banner">' +
+                '<span>購入モード中</span>' +
+                '<button id="purchase-mode-toggle" class="purchase-mode-btn inline" type="button" aria-pressed="true">解除</button>' +
+                '</div>';
+            eventInputSectionHtml =
+                '<div class="event-input-section purchase-mode-note">' +
+                '<span class="section-label">購入モード</span>' +
+                '<p class="purchase-mode-note-text">部署・職員の選択は不要です。在庫追加のみ実行できます。</p>' +
+                '</div>';
+        } else {
+            eventInputSectionHtml =
+                '<div class="event-input-section">' +
+                '<span class="section-label">部署・職員選択</span>' +
+                '<div class="event-select-grid">' +
+                '<div class="event-select-block">' +
+                '<label for="department-select" class="event-label">部署</label>' +
+                '<select id="department-select" class="event-select"></select>' +
+                '</div>' +
+                '<div class="event-select-block">' +
+                '<label for="staff-select" class="event-label">職員名</label>' +
+                '<select id="staff-select" class="event-select"></select>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
+        }
+
         if (!shouldHideQuantitySelector) {
             quantitySectionHtml =
                 '<div class="quantity-adjust">' +
@@ -383,6 +475,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '</div>';
         }
         productDetail.innerHTML =
+            modeBannerHtml +
             '<div class="product-header">' +
             '<div class="product-info">' +
             '<span class="category-label">' + (item.product.category_name || '-') + '</span>' +
@@ -399,19 +492,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '<span class="section-label">製品情報</span>' +
             '<p class="product-info-text">' + productInfoText + '</p>' +
             '</div>' +
-            '<div class="event-input-section">' +
-            '<span class="section-label">部署・職員選択</span>' +
-            '<div class="event-select-grid">' +
-            '<div class="event-select-block">' +
-            '<label for="department-select" class="event-label">部署</label>' +
-            '<select id="department-select" class="event-select"></select>' +
-            '</div>' +
-            '<div class="event-select-block">' +
-            '<label for="staff-select" class="event-label">職員名</label>' +
-            '<select id="staff-select" class="event-select"></select>' +
-            '</div>' +
-            '</div>' +
-            '</div>' +
+            eventInputSectionHtml +
             quantitySectionHtml +
             '</div>';
 
@@ -446,8 +527,11 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        renderDepartmentSelect();
-        renderStaffSelect();
+        bindPurchaseModeButton();
+        if (!isPurchaseMode) {
+            renderDepartmentSelect();
+            renderStaffSelect();
+        }
         updateRegistrationFlowState();
     }
 
@@ -597,21 +681,28 @@ document.addEventListener('DOMContentLoaded', function () {
         var departmentId = departmentSelect ? departmentSelect.value : '';
         var staffId = staffSelect ? staffSelect.value : '';
 
-        if (!departmentId) {
-            showNotification('部署を選択してください', 'out');
-            return;
+        if (action === 'purchase') {
+            departmentId = '';
+            staffId = '';
+        } else {
+            if (!departmentId) {
+                showNotification('部署を選択してください', 'out');
+                return;
+            }
+
+            selectedDepartment = departmentId;
+            selectedStaff = staffId;
+            updateRegistrationFlowState();
         }
 
-        selectedDepartment = departmentId;
-        selectedStaff = staffId;
-        updateRegistrationFlowState();
+        var actionLabel = getActionLabel(action);
 
-        var actionLabel = '出庫';
-        if (action === 'in') actionLabel = '入庫';
-        if (action === 'dispose') actionLabel = '廃棄';
-
-        var depLabel = departmentSelect.options[departmentSelect.selectedIndex].text;
-        var staffLabel = staffId && staffSelect.selectedIndex >= 0 ? staffSelect.options[staffSelect.selectedIndex].text : '';
+        var depLabel = (departmentSelect && departmentSelect.selectedIndex >= 0)
+            ? departmentSelect.options[departmentSelect.selectedIndex].text
+            : '';
+        var staffLabel = (staffId && staffSelect && staffSelect.selectedIndex >= 0)
+            ? staffSelect.options[staffSelect.selectedIndex].text
+            : '';
 
         pendingUpdate = {
             action: action,
@@ -627,8 +718,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 'バーコード: ' + (currentProduct.product.product_cd || '-') + '<br>' +
                 'イベント: ' + actionLabel + '<br>' +
                 '数量: ' + quantity + '<br>' +
-                '部署: ' + depLabel + '<br>' +
-                (staffLabel ? '職員: ' + staffLabel + '<br>' : '') +
+                (action !== 'purchase' ? ('部署: ' + depLabel + '<br>') : '') +
+                (action !== 'purchase' && staffLabel ? ('職員: ' + staffLabel + '<br>') : '') +
                 '<br>' +
                 '登録しますか？';
         }
@@ -687,10 +778,9 @@ document.addEventListener('DOMContentLoaded', function () {
             })
         }, function () {
             isSubmittingUpdate = false;
-            var actionLabel = '出庫';
-            if (action === 'in') actionLabel = '入庫';
-            if (action === 'dispose') actionLabel = '廃棄';
-            showNotification((currentProduct.product.product_name || '-') + ' を ' + quantity + '個 ' + actionLabel + 'しました。', action === 'in' ? 'in' : 'out');
+            var actionLabel = getActionLabel(action);
+            var noticeType = (action === 'in' || action === 'purchase') ? 'in' : 'out';
+            showNotification((currentProduct.product.product_name || '-') + ' を ' + quantity + '個 ' + actionLabel + 'しました。', noticeType);
             closeConfirmModal();
             resetScreenState();
         }, function (err) {
@@ -721,6 +811,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     buildBarcodeNumpad();
+    setActionButtonVisible(stockInBtn, true);
+    setActionButtonVisible(stockOutBtn, true);
+    setActionButtonVisible(stockDisposeBtn, true);
+    setActionButtonVisible(stockPurchaseBtn, false);
 
     for (var t = 0; t < listTabButtons.length; t++) {
         listTabButtons[t].addEventListener('click', function (event) {
@@ -762,6 +856,9 @@ document.addEventListener('DOMContentLoaded', function () {
     stockOutBtn.addEventListener('click', function () { openConfirmModal('out'); });
     if (stockDisposeBtn) {
         stockDisposeBtn.addEventListener('click', function () { openConfirmModal('dispose'); });
+    }
+    if (stockPurchaseBtn) {
+        stockPurchaseBtn.addEventListener('click', function () { openConfirmModal('purchase'); });
     }
 
     if (confirmNoBtn) {

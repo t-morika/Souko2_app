@@ -605,6 +605,15 @@ body {
     background-color: #4b5563;
 }
 
+.purchase-btn {
+    background-color: #0f766e;
+    box-shadow: 0 10px 15px -3px rgba(15, 118, 110, 0.35);
+}
+
+.purchase-btn:hover {
+    background-color: #0d9488;
+}
+
 .compact-btn {
     width: 8.5rem;
     height: 5rem;
@@ -618,11 +627,19 @@ body {
     height: 1.75rem;
 }
 
+.action-btn.is-hidden {
+    display: none !important;
+}
+
 .action-btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+}
+
+.execution-section.purchase-mode {
+    grid-template-columns: 1fr;
 }
 
 /* Notifications */
@@ -798,6 +815,55 @@ body {
     color: #737373;
     max-width: 15rem;
     line-height: 1.5;
+}
+
+.purchase-mode-btn {
+    margin-top: 0.5rem;
+    border: 1px solid #0f766e;
+    background: rgba(15, 118, 110, 0.2);
+    color: #99f6e4;
+    border-radius: 0.75rem;
+    padding: 0.55rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.purchase-mode-btn:hover {
+    background: rgba(15, 118, 110, 0.35);
+}
+
+.purchase-mode-btn.active {
+    border-color: #14b8a6;
+    background: rgba(20, 184, 166, 0.32);
+    color: #ccfbf1;
+}
+
+.purchase-mode-btn.inline {
+    margin-top: 0;
+    font-size: 0.82rem;
+    padding: 0.4rem 0.8rem;
+}
+
+.purchase-mode-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid rgba(20, 184, 166, 0.45);
+    border-radius: 0.75rem;
+    color: #99f6e4;
+    background: rgba(15, 118, 110, 0.14);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.purchase-mode-note-text {
+    margin: 0;
+    color: #9ca3af;
+    font-size: 0.9rem;
 }
 
 /* ===== List page overrides/additions (from style-list.css) ===== */

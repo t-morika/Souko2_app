@@ -63,7 +63,8 @@
                             <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                         </svg>
                         <p>製品を選択してください</p>
-                        <p class="description">左側の機器一覧から、バーコードを使わずに製品を選択できます。</p>
+                        <p class="description">左側の機器一覧から、製品を選択してください。</p>
+                        <button id="purchase-mode-toggle" class="purchase-mode-btn" type="button" aria-pressed="false">購入モード</button>
                     </div>
                 </div>
                 <div class="execution-section">
@@ -84,6 +85,9 @@
                     </button>
                     <button id="stock-dispose" class="action-btn dispose-btn compact-btn" title="廃棄">
                         <span>廃棄</span>
+                    </button>
+                    <button id="stock-purchase" class="action-btn purchase-btn compact-btn" title="在庫追加" hidden>
+                        <span>在庫追加</span>
                     </button>
                 </div>
             </section>
