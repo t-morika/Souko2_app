@@ -1,0 +1,4299 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.gitignore
+app-icon.svg
+docs/operations/DESKTOP_APP_SHORTCUT_SETUP.md
+docs/operations/DUAL_MODE_MINIMAL_PLAN.md
+docs/operations/OPERATIONS.md
+docs/operations/PRODUCTION_CHECKLIST_MINIMAL.md
+docs/operations/TERMINAL_DISTRIBUTION_ONEPAGE.md
+docs/operations/WINDOWS_AUTOSTART_TASKS.md
+docs/planning/CLEANUP_CANDIDATES.md
+docs/planning/COMPLETION_CHECKLIST.md
+go.mod
+index.html
+main.exe
+main.go
+manifest.webmanifest
+README.md
+script.js
+scripts/windows/register-autostart-tasks.bat
+scripts/windows/unregister-autostart-tasks.bat
+start-inventory-server.cmd
+start-inventory-ui.cmd
+style.css
+sw.js
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="app-icon.svg">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="112" fill="#0a0a0a"/>
+  <rect x="96" y="96" width="320" height="320" rx="80" fill="url(#g)" opacity="0.18"/>
+  <g fill="none" stroke="#f5f5f5" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="148" y="156" width="216" height="200" rx="36" opacity="0.95"/>
+    <path d="M184 220h144"/>
+    <path d="M184 272h144"/>
+    <path d="M184 324h92"/>
+  </g>
+  <circle cx="368" cy="352" r="18" fill="#f5f5f5" opacity="0.95"/>
+</svg>
+</file>
+
+<file path="docs/operations/DESKTOP_APP_SHORTCUT_SETUP.md">
+# デスクトップ運用手順（アプリモード）
+
+## 対象
+- Windows 端末
+- Microsoft Edge または Google Chrome
+
+## 目的
+- 在庫管理アプリを通常ブラウザタブではなく、専用アプリ風ウィンドウで起動する。
+
+## 事前確認
+1. サーバーが起動できること
+- 実行: `go run main.go`
+- 確認: `http://localhost:8080` が開けること
+
+2. ブラウザの実行ファイル位置（既定）
+- Edge: `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`
+- Chrome: `C:\Program Files\Google\Chrome\Application\chrome.exe`
+
+## 手順A（推奨）: Edge のショートカット作成
+1. デスクトップで右クリック → 新規作成 → ショートカット
+2. 項目の場所に以下を入力
+```text
+"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --app=http://localhost:8080
+```
+3. 名前を `在庫管理アプリ（Desktop）` にする
+4. 作成後、右クリック → プロパティ → 実行時の大きさを「最大化」に変更
+
+## 手順B: Chrome のショートカット作成
+1. デスクトップで右クリック → 新規作成 → ショートカット
+2. 項目の場所に以下を入力
+```text
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --app=http://localhost:8080
+```
+3. 名前を `在庫管理アプリ（Desktop）` にする
+
+## サーバーと同時起動するショートカット（任意）
+1. 以下内容で `start-inventory-desktop.cmd` を作成
+```bat
+@echo off
+cd /d C:\Users\ks24.m-takahashi\Desktop\souko_2
+start "inventory-server" cmd /c "go run main.go"
+timeout /t 2 /nobreak > nul
+start "inventory-ui" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --app=http://localhost:8080
+```
+2. この cmd をダブルクリックすると、サーバーとデスクトップ窓を連続起動できる
+
+## よくあるつまずき
+1. 画面が開かない
+- 先に `go run main.go` を実行してエラー有無を確認
+- `http://localhost:8080` が通常ブラウザで開けるか確認
+
+2. Edge のパスが違う
+- `C:\Program Files\Microsoft\Edge\Application\msedge.exe` も確認
+
+3. カメラが動かない
+- アプリ窓でもブラウザ権限設定が必要
+- Edge のサイト権限でカメラを許可
+
+## 完了判定
+- デスクトップのショートカットから、専用ウィンドウで起動できる
+- 通常タブではなく、アプリ風表示で操作できる
+- 入庫・出庫・廃棄・検索が実行できる
+</file>
+
+<file path="docs/operations/TERMINAL_DISTRIBUTION_ONEPAGE.md">
+# 在庫管理アプリ 端末配布 1ページ版（超短縮）
+
+## これだけ実施
+1. フォルダを配置
+- `C:\Users\<ユーザー名>\Desktop\souko_2` に一式を置く
+
+2. 初回起動確認
+```powershell
+cd C:\Users\<ユーザー名>\Desktop\souko_2
+go run main.go
+```
+- ブラウザで `http://localhost:8080` を開く
+- エラー時は下の「起動NG時」へ
+
+3. 自動起動を一発登録
+```bat
+scripts\windows\register-autostart-tasks.bat
+```
+- 作成されるタスク
+  - `Inventory Server Auto Start`
+  - `Inventory UI Auto Start`
+
+4. 端末再ログオンして確認
+- 自動でサーバー起動 + アプリ窓起動すること
+
+## 起動NG時（最短対処）
+1. 8080競合確認
+```powershell
+Get-NetTCPConnection -LocalPort 8080 -State Listen | Select-Object -First 1 OwningProcess
+```
+2. 占有プロセス停止
+```powershell
+Stop-Process -Id <PID> -Force
+```
+3. 再起動
+```powershell
+go run main.go
+```
+
+## アンインストール（自動起動解除）
+```bat
+scripts\windows\unregister-autostart-tasks.bat
+```
+
+## 最終チェック（30秒）
+- `http://localhost:8080/api/categories` が 200
+- 画面で「カテゴリ選択 → 商品表示」ができる
+- IN/OUT/廃棄のボタン操作ができる
+</file>
+
+<file path="docs/operations/WINDOWS_AUTOSTART_TASKS.md">
+# Windows 自動起動設定手順（タスクスケジューラ）
+
+## 目的
+- Windows ログオン時に以下を自動起動する。
+- 1) 在庫管理サーバー（Go）
+- 2) デスクトップ画面（Edge アプリモード）
+
+## 最短手順（コマンド一発）
+以下を実行すると、ランチャーcmd作成とタスク登録を自動で実施します。
+
+```bat
+scripts\windows\register-autostart-tasks.bat
+```
+
+補足:
+- 登録を解除する場合は以下を実行します。
+
+```bat
+scripts\windows\unregister-autostart-tasks.bat
+```
+
+## 準備
+1. サーバー起動バッチを作成
+- ファイル名: `start-inventory-server.cmd`
+- 配置先: `C:\Users\ks24.m-takahashi\Desktop\souko_2`
+- 内容:
+```bat
+@echo off
+cd /d C:\Users\ks24.m-takahashi\Desktop\souko_2
+go run main.go
+```
+
+2. UI起動バッチを作成
+- ファイル名: `start-inventory-ui.cmd`
+- 配置先: `C:\Users\ks24.m-takahashi\Desktop\souko_2`
+- 内容:
+```bat
+@echo off
+timeout /t 2 /nobreak > nul
+start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --app=http://localhost:8080
+```
+
+## タスク作成（GUI）
+
+### タスク1: サーバー起動
+1. タスクスケジューラを開く
+2. 「タスクの作成」を選択
+3. 全般タブ
+- 名前: `Inventory Server Auto Start`
+- 「ユーザーがログオンしているときのみ実行する」
+4. トリガータブ
+- 新規 → 「ログオン時」
+5. 操作タブ
+- 新規 → プログラム/スクリプト:
+```text
+C:\Users\ks24.m-takahashi\Desktop\souko_2\start-inventory-server.cmd
+```
+6. 条件タブ
+- 必要なら「AC電源時のみ実行」のチェックを外す
+7. 設定タブ
+- 「タスクを要求時に実行する」を有効
+
+### タスク2: UI起動
+1. 「タスクの作成」を選択
+2. 全般タブ
+- 名前: `Inventory UI Auto Start`
+3. トリガータブ
+- 新規 → 「ログオン時」
+- 遅延: 10秒（推奨）
+4. 操作タブ
+- 新規 → プログラム/スクリプト:
+```text
+C:\Users\ks24.m-takahashi\Desktop\souko_2\start-inventory-ui.cmd
+```
+
+## 動作確認
+1. タスクスケジューラから両タスクを右クリック実行
+2. サーバーが起動し、Edgeアプリ窓が表示されること
+3. `http://localhost:8080/api/categories` が 200 を返すこと
+
+## 停止方法
+1. UIを閉じる
+2. サーバーのコンソールを閉じる
+3. 自動起動を止める場合はタスクを「無効化」
+
+## 補足
+- 社内Web運用端末では、UIタスクは不要でサーバーのみ自動起動でもよい
+- 端末ごとにブラウザパスが異なる場合は、cmd内のパスを調整する
+- `register-autostart-tasks.bat --dry-run` で、タスク登録せずにランチャーcmdの生成だけを確認できる
+</file>
+
+<file path="docs/planning/COMPLETION_CHECKLIST.md">
+# アプリ完成チェックリスト
+
+最終更新: 2026-05-22
+対象: PC機器在庫管理アプリ
+
+## 0. 完成定義（Done Criteria）
+- [x] 必須業務フロー（入庫/出庫/廃棄）がUIから実行できる
+- [x] 在庫が正しく増減し、不正操作（無効イベント・在庫不足）が拒否される
+- [x] event_master と実装イベントが整合している
+- [x] 運用手順書が現行仕様と一致している
+- [ ] 本番引き渡し前チェック（起動・API・復旧）が完了している
+
+## 1. 要件確定
+- [x] 必須機能・任意機能・対象外機能を確定
+- [x] 「部署選択」「職員選択」「登録前確認ポップアップ」を採用するか決定
+- [x] 完成判定基準（受け入れ条件）を文章化
+
+確定内容:
+- 部署選択・職員選択・登録前確認ポップアップは採用して今後実装対象とする
+
+受け入れ基準:
+- [x] 要件一覧に曖昧表現がない
+- [x] 対象外機能が明示されている
+
+## 2. イベント仕様
+- [x] UIイベントと event_master の対応表を確定
+  - [x] 入庫 -> event_master: 入庫 (id=01)
+  - [x] 出庫 -> event_master: 出庫 (id=02)
+  - [x] 廃棄 -> event_master: 廃棄 (id=03)
+- [x] 非表示イベント（購入・課内一時利用など）を無視する仕様を確定
+- [x] APIで許可する action を定義（in/out/dispose）
+
+受け入れ基準:
+- [x] `action=temp` が `Invalid action` になる
+- [x] `dispose` 実行時に `event_id=03` が返る
+
+## 3. データ整合性
+- [x] 在庫マイナス防止のテストを通過
+- [x] quantity <= 0 を拒否
+- [x] 不正 product_cd を適切にハンドリング
+- [x] 同時更新時の方針（運用上の注意）を手順書へ記載
+
+受け入れ基準:
+- [x] 異常系APIテスト結果が保存されている
+
+## 4. UI最終調整（タブレット）
+- [x] カテゴリー/メーカーの視認性を確認
+- [x] 廃棄ボタン（右端コンパクト）の押しやすさを確認
+- [x] バーコード入力（テンキー含む）の操作性を確認
+- [x] 操作後通知メッセージが業務文言に合っている
+
+受け入れ基準:
+- [x] 実機ブラウザ（Edge/Chrome）で1周操作が完了
+
+## 5. テスト
+- [x] API正常系テスト
+  - [x] categories/makers/inventory取得
+  - [x] inventory/update in
+  - [x] inventory/update out
+  - [x] inventory/update dispose
+- [x] API異常系テスト
+  - [x] Invalid action
+  - [x] Insufficient stock
+  - [x] quantity不正
+- [x] 不正 product_cd
+- [x] UI回帰テスト
+  - [x] 階層選択 -> 製品選択 -> イベント登録
+  - [x] バーコード検索 -> イベント登録
+
+受け入れ基準:
+- [x] 主要テストが全て成功
+
+## 6. 運用ドキュメント
+- [x] OPERATIONS.md に最新仕様を反映
+- [x] 障害対応（ポート競合、キャッシュ不整合、復旧）を確認
+- [x] バックアップ/リストア手順を再検証
+
+受け入れ基準:
+- [ ] 第三者が手順書だけで起動〜検証を実施可能
+
+## 7. リポジトリ整理
+- [x] .gitignore の妥当性確認
+- [ ] 不要追跡ファイルの整理（必要なら .history も対象化）
+- [x] コミットメッセージと粒度を整理
+- [ ] リリースタグ作成
+
+受け入れ基準:
+- [ ] `git status` が想定どおり
+
+## 8. リリース前最終確認
+- [x] サーバー単一起動（8080競合なし）
+- [x] 画面アクセスと主要API疎通
+- [x] 在庫変更テスト後に原状復帰
+- [ ] 受け入れ担当者レビュー
+
+受け入れ基準:
+- [ ] サインオフ取得
+
+---
+
+## 優先着手順（次の3ステップ）
+1. 実機ブラウザ（Edge/Chrome）で最終1周操作（受け入れ担当者同席）
+2. 受け入れ担当者レビューとサインオフ取得
+3. リリースタグ作成と最終引き渡し
+
+## 進捗ログ
+- [x] 2026-05-22: 廃棄ボタン追加、event_master連携（in/out/dispose）実装、API/UI動作確認
+- [x] 2026-05-22: OPERATIONS.md更新、.gitignore修正、生成物除外コミット
+- [x] 2026-05-22: quantity不正テスト、バーコード検索→入庫UI回帰、バックアップ/リストア再検証を実施
+- [x] 2026-05-22: 不正 product_cd テストを実施（updateはFKエラー、searchはProduct not found）
+- [x] 2026-05-22: 同時更新時の運用方針を手順書に追加、異常系テスト記録を手順書へ反映
+- [x] 2026-05-22: ブラウザで最終1周（階層選択・バーコード検索・廃棄/入庫）を実施し、在庫原状復帰を確認
+- [x] 2026-05-22: 部署選択・職員選択・登録前確認ポップアップの入力要素を実装し、確認登録フローを検証
+- [ ] YYYY-MM-DD: 受け入れ担当者レビューと最終サインオフ
+</file>
+
+<file path="go.mod">
+module inventory-app
+
+go 1.21
+
+require (
+	github.com/gin-gonic/gin v1.9.1
+	modernc.org/sqlite v1.28.0
+)
+
+require (
+	github.com/bytedance/sonic v1.9.1 // indirect
+	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
+	github.com/gin-contrib/sse v0.1.0 // indirect
+	github.com/go-playground/locales v0.14.1 // indirect
+	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/go-playground/validator/v10 v10.14.0 // indirect
+	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/google/uuid v1.3.0 // indirect
+	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
+	github.com/leodido/go-urn v1.2.4 // indirect
+	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
+	github.com/ugorji/go/codec v1.2.11 // indirect
+	golang.org/x/arch v0.3.0 // indirect
+	golang.org/x/crypto v0.9.0 // indirect
+	golang.org/x/mod v0.8.0 // indirect
+	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/sys v0.9.0 // indirect
+	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/tools v0.6.0 // indirect
+	google.golang.org/protobuf v1.30.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
+	lukechampine.com/uint128 v1.2.0 // indirect
+	modernc.org/cc/v3 v3.40.0 // indirect
+	modernc.org/ccgo/v3 v3.16.13 // indirect
+	modernc.org/libc v1.29.0 // indirect
+	modernc.org/mathutil v1.6.0 // indirect
+	modernc.org/memory v1.7.2 // indirect
+	modernc.org/opt v0.1.3 // indirect
+	modernc.org/strutil v1.1.3 // indirect
+	modernc.org/token v1.0.1 // indirect
+)
+</file>
+
+<file path="manifest.webmanifest">
+{
+  "name": "PC機器在庫管理",
+  "short_name": "在庫管理",
+  "description": "タブレット向けPC機器在庫管理（ローカル運用）",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/static/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+</file>
+
+<file path="scripts/windows/register-autostart-tasks.bat">
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+
+set "SCRIPT_DIR=%~dp0"
+for %%I in ("%SCRIPT_DIR%..\..") do set "ROOT=%%~fI"
+
+set "EDGE_1=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+set "EDGE_2=C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+set "CHROME_1=C:\Program Files\Google\Chrome\Application\chrome.exe"
+set "CHROME_2=C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+
+set "BROWSER_EXE="
+if exist "%EDGE_1%" set "BROWSER_EXE=%EDGE_1%"
+if not defined BROWSER_EXE if exist "%EDGE_2%" set "BROWSER_EXE=%EDGE_2%"
+if not defined BROWSER_EXE if exist "%CHROME_1%" set "BROWSER_EXE=%CHROME_1%"
+if not defined BROWSER_EXE if exist "%CHROME_2%" set "BROWSER_EXE=%CHROME_2%"
+if not defined BROWSER_EXE (
+  echo [ERROR] Edge/Chrome not found. Please check browser path.
+  exit /b 1
+)
+
+echo [INFO] Workspace: %ROOT%
+echo [INFO] Browser  : %BROWSER_EXE%
+
+> "%ROOT%\start-inventory-server.cmd" (
+  echo @echo off
+  echo cd /d "%ROOT%"
+  echo go run main.go
+)
+
+> "%ROOT%\start-inventory-ui.cmd" (
+  echo @echo off
+  echo timeout /t 2 /nobreak ^> nul
+  echo start "" "%BROWSER_EXE%" --app=http://localhost:8080
+)
+
+echo [INFO] launcher files created:
+echo        %ROOT%\start-inventory-server.cmd
+echo        %ROOT%\start-inventory-ui.cmd
+
+if /I "%~1"=="--dry-run" (
+  echo [DRY-RUN] schtasks /Create was skipped.
+  exit /b 0
+)
+
+schtasks /Create /F /SC ONLOGON /TN "Inventory Server Auto Start" /TR "\"%ROOT%\start-inventory-server.cmd\"" /RL LIMITED
+if errorlevel 1 (
+  echo [ERROR] Failed to create server task.
+  exit /b 1
+)
+
+schtasks /Create /F /SC ONLOGON /DELAY 0000:10 /TN "Inventory UI Auto Start" /TR "\"%ROOT%\start-inventory-ui.cmd\"" /RL LIMITED
+if errorlevel 1 (
+  echo [ERROR] Failed to create UI task.
+  exit /b 1
+)
+
+echo [OK] Task creation completed.
+schtasks /Query /TN "Inventory Server Auto Start"
+schtasks /Query /TN "Inventory UI Auto Start"
+
+exit /b 0
+</file>
+
+<file path="scripts/windows/unregister-autostart-tasks.bat">
+@echo off
+setlocal EnableExtensions
+
+echo [INFO] Deleting scheduled tasks...
+schtasks /Delete /TN "Inventory Server Auto Start" /F >nul 2>&1
+schtasks /Delete /TN "Inventory UI Auto Start" /F >nul 2>&1
+
+echo [OK] Delete completed (also OK when tasks do not exist).
+exit /b 0
+</file>
+
+<file path="start-inventory-ui.cmd">
+@echo off
+timeout /t 2 /nobreak > nul
+start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --app=http://localhost:8080
+</file>
+
+<file path="docs/operations/DUAL_MODE_MINIMAL_PLAN.md">
+# 在庫管理アプリ 二重運用（最小工程版）
+
+## 目的
+- 同じアプリを Web と デスクトップ の2通りで運用する。
+- 改修は最小限（ほぼゼロ）にする。
+
+## 方針（最小工程）
+- バックエンドは今の Go サーバーをそのまま使う。
+- 画面は今の Web 画面をそのまま使う。
+- デスクトップ版は「専用ブラウザ窓（アプリモード）」で運用する。
+
+この方針なら、Electron や Wails への移植が不要で、最短で二重運用ができる。
+
+## 実施タスク（順番どおり）
+
+1. サーバー起動コマンドを固定する
+- 実行: go run main.go
+- 期待結果: http://localhost:8080 で画面が開ける
+
+2. Web運用手順を確定する
+- 社内PCのブラウザで http://サーバーIP:8080 にアクセス
+- ルーターやWindows Defenderで 8080 ポートを許可
+- 運用手順書に「URL・起動手順・停止手順」を記載
+
+3. デスクトップ運用を追加する（改修なし）
+- 端末ごとにブラウザのアプリモード起動ショートカットを作成
+- 例（Edge）:
+  - msedge.exe --app=http://localhost:8080
+- 例（Chrome）:
+  - chrome.exe --app=http://localhost:8080
+- これで通常タブではなく、アプリ風の専用ウィンドウで運用できる
+
+4. 自動起動を設定する（任意だが推奨）
+- Windows タスクスケジューラでログオン時に以下を起動
+  - Go サーバー
+  - Edge/Chrome のアプリモード
+- 端末起動後に自動で業務画面が立ち上がるようにする
+
+5. DB運用ルールを最低限決める
+- 現状の参照DBを統一する（inventory.db を参照）
+- バックアップを日次でコピー
+- 退避先フォルダを固定（例: D:\backup\souko_2）
+
+6. 動作確認（10分チェック）
+- Web: 一般ブラウザで開ける
+- Desktop: アプリモード窓で開ける
+- 共通: 入庫・出庫・廃棄・バーコード検索が通る
+- 共通: 同じデータが見える（DBが同一である）
+
+## 改修が必要な場合（最小）
+- 基本は改修不要。
+- 必要なら次の1点だけ実施:
+  - DBパスを環境変数で切替可能に戻す（開発/本番の誤接続防止）
+
+## ここまでの成果物（最小）
+- Web運用: URLで利用可能
+- デスクトップ運用: アプリモードショートカットで利用可能
+- コードの大規模変更なし
+
+## 将来拡張（今は不要）
+- 配布型デスクトップアプリ（Wails/Electron）化
+- 自動アップデート
+- オフライン同期機能
+</file>
+
+<file path="docs/operations/PRODUCTION_CHECKLIST_MINIMAL.md">
+# 本番運用チェックリスト（最小）
+
+## 使い方
+- リリース日当日に、上から順にチェックする。
+- NG が出た項目は、当日中に原因を記録して再確認する。
+
+## 1. 起動前チェック
+- [ ] 作業フォルダが最新である（必要ファイルがある）
+- [ ] `go version` が取得できる
+- [ ] DBファイル名を確認した（現運用は `inventory.db`）
+- [ ] 前日バックアップが存在する
+
+## 2. サーバー起動チェック
+- [ ] `go run main.go` がエラーなく起動する
+- [ ] ログに `Server starting on http://localhost:8080` が出る
+- [ ] `http://localhost:8080` で画面表示できる
+
+## 3. API疎通チェック
+- [ ] `GET /api/categories` が 200
+- [ ] `GET /api/makers?category_id=01` が 200
+- [ ] `GET /api/inventory` が 200
+
+確認コマンド（PowerShell）:
+```powershell
+Invoke-WebRequest http://localhost:8080/api/categories | Select-Object -ExpandProperty StatusCode
+Invoke-WebRequest "http://localhost:8080/api/makers?category_id=01" | Select-Object -ExpandProperty StatusCode
+Invoke-WebRequest http://localhost:8080/api/inventory | Select-Object -ExpandProperty StatusCode
+```
+
+## 4. 画面操作チェック（Web）
+- [ ] カテゴリ選択で一覧が更新される
+- [ ] メーカー選択で絞り込みできる
+- [ ] バーコード検索で該当商品が表示される
+- [ ] 入庫が成功する
+- [ ] 出庫が成功する（在庫なし時は無効になる）
+- [ ] 廃棄が成功する
+
+## 5. 画面操作チェック（デスクトップ）
+- [ ] ショートカット（アプリモード）で起動できる
+- [ ] Web版と同じデータを表示する
+- [ ] カメラタブの起動ができる（端末権限許可済み）
+
+## 6. データ整合チェック
+- [ ] 同じ操作を二重送信しても重複反映されない
+- [ ] 在庫数が負になっていない
+- [ ] 主要カテゴリの表示が崩れていない
+
+## 7. 運用設定チェック
+- [ ] Windows Defender / FW の必要ポート設定済み
+- [ ] 自動起動タスクが有効（必要端末のみ）
+- [ ] 障害時の連絡先と復旧手順が共有済み
+
+## 8. 当日クローズ判定
+- [ ] Web運用 OK
+- [ ] デスクトップ運用 OK
+- [ ] バックアップ実行 OK
+- [ ] 未解決事項なし（あればチケット化済み）
+
+## 障害時の最小対応
+1. サーバー再起動
+2. ブラウザ再起動（Service Worker 再登録を含む）
+3. 直近バックアップ確認
+4. 影響範囲を記録してエスカレーション
+</file>
+
+<file path="docs/planning/CLEANUP_CANDIDATES.md">
+# 不要ファイル候補リスト（test-newdb）
+
+作成日: 2026-05-27
+対象ブランチ: test-newdb
+方針: ここでは候補提示のみ。削除は未実施。
+
+## 優先度A（高）
+
+### 1) `.history/` 配下（追跡済み 106件）
+- 種別: エディタ履歴スナップショット
+- 根拠:
+  - `.gitignore` で `.history/` は除外対象
+  - 完成チェックで「不要追跡ファイルの整理（必要なら .history も対象化）」が未完了
+- リスク: 低（通常運用で参照しない）
+- 推奨: まとめて整理対象
+
+## 優先度B（高）
+
+### 2) 一時検証用Goスクリプト（追跡済み 5件）
+- `check-both-dbs.go`
+- `inspect-data.go`
+- `test-db.go`
+- `test-db2.go`
+- `tmp_staff_log_check.go`
+
+- 種別: DB調査/検証用の単発ユーティリティ
+- 根拠:
+  - 本番アプリ実行経路（`main.go`）から参照されない
+  - `git grep` で上記ファイル名の参照ヒットなし（自己参照除く）
+- リスク: 低〜中（今後の手動調査で使う可能性があるなら保留）
+- 推奨: 残すなら `tools/` へ移動し用途をREADME化、不要なら整理対象
+
+## 優先度C（中）
+
+### 3) ビルド生成物の追跡ファイル
+- `inventory-app`
+- `main.exe`
+
+- 種別: バイナリ生成物
+- 根拠:
+  - 再生成可能
+  - `.gitignore` は `inventory-app.exe` のみ除外で、現状ルールが不統一
+- リスク: 中（配布物として意図的に保持している場合は削除不可）
+- 推奨: 配布方針次第。ソース管理優先なら整理候補
+
+## 優先度D（要判断）
+
+### 4) `inventory.db`（追跡済み 1件）
+- 種別: 旧運用DBの可能性
+- 根拠:
+  - 現行実装は `inventory.db` を参照
+  - ただし移行履歴比較で残している可能性あり
+- リスク: 中〜高（履歴比較・復旧用途があると影響）
+- 推奨: 旧DB保持ポリシー確認後に判断
+
+## 参考（今回のカウント）
+- `.history/` 追跡件数: 106
+- 一時検証Goファイル: 5
+- 追跡バイナリ: 2
+- 追跡DB（候補）: 1（`inventory.db`）
+
+## 削除前の確認観点（実行はまだ）
+1. 配布バイナリをリポジトリ管理する運用か
+2. `inventory.db` を比較用資産として保持するか
+3. 一時検証Goファイルを将来再利用するか
+</file>
+
+<file path="start-inventory-server.cmd">
+@echo off
+setlocal
+cd /d "C:\Users\ks24.m-takahashi\Desktop\souko_2"
+set "INVENTORY_DB_PATH=C:\Users\ks24.m-takahashi\Desktop\inventory.db"
+go run main.go
+endlocal
+</file>
+
+<file path="docs/operations/OPERATIONS.md">
+# PC機器在庫管理アプリ 運用手順書
+
+## 1. 目的
+本手順書は、日次運用担当者が本アプリを安全に起動・利用・保守できるようにするための運用ガイドです。
+
+## 2. 対象システム
+- アプリ: Go + Gin + SQLite
+- 画面URL: http://localhost:8080/
+- 主な機能:
+  - カテゴリー -> メーカー -> 製品の階層選択
+  - バーコード検索
+  - 入庫/出庫/廃棄による在庫更新
+
+## 3. 事前確認
+- Go が利用可能であること
+- 8080番ポートが未使用、または既存プロセスを停止済みであること
+- DBファイルが存在すること
+  - 運用DB: inventory.db
+
+注意:
+- 現在の実装は、`INVENTORY_DB_PATH` -> `INVENTORY_DB_DIR/inventory.db` -> `./inventory.db` の順で参照します。
+- 開発時に共有フォルダを使う場合は、`INVENTORY_DB_DIR=C:\Users\ks24.m-takahashi\Desktop` を設定します。
+
+## 4. 起動手順
+### 4.0 事前チェック（推奨）
+`go run main.go` が `listen tcp :8080: bind: Only one usage ...` で失敗する場合は、先に8080ポート占有を解消します。
+
+```powershell
+$conn = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
+if ($conn) {
+  $pid = ($conn | Select-Object -First 1 -ExpandProperty OwningProcess)
+  Get-Process -Id $pid | Select-Object Id, ProcessName, Path
+  Stop-Process -Id $pid -Force
+}
+```
+
+### 4.1 起動方法（推奨）
+1. 作業フォルダへ移動
+2. 以下を実行
+
+```powershell
+.\start-inventory-server.cmd
+```
+
+3. コンソールに `Server starting on http://localhost:8080` が表示されることを確認
+
+補足:
+- このバッチは `C:\Users\ks24.m-takahashi\Desktop\inventory.db` を明示的に参照します。
+- 直接 `go run main.go` する場合は、同じ環境変数を手動設定してください。
+
+### 4.2 実行ファイルから起動
+```powershell
+.\inventory-app.exe
+```
+
+## 5. 停止手順
+起動したターミナルで `Ctrl + C` を押して停止します。
+
+## 6. 日次運用フロー
+1. ブラウザで http://localhost:8080/ を開く
+2. 左ペインでカテゴリーを選択
+3. メーカーを選択
+4. 製品一覧から対象製品を選択
+5. 数量を設定し、以下を実行
+   - 入庫: 入庫確定 (IN)
+   - 出庫: 出庫確定 (OUT)
+  - 廃棄: 廃棄（右端コンパクトボタン）
+6. 通知メッセージを確認
+
+## 6.1 入出庫イベント仕様（event_master連携）
+在庫更新イベントは `inventory.db` の `event_master` を参照して処理されます。
+
+- 入庫: event_master.name = 入庫（id=01）
+- 出庫: event_master.name = 出庫（id=02）
+- 廃棄: event_master.name = 廃棄（id=03）
+
+注意:
+- 画面に表示していないイベントは無視します（現在は購入・課内一時利用を非対象）。
+- `action=temp` など非対象アクションは `Invalid action` になります。
+
+## 7. バーコード運用
+1. バーコード入力欄を選択
+2. 必要に応じてテンキーで入力
+3. 検索ボタンを押下
+4. 製品詳細が表示されることを確認
+
+補足:
+- 全角記号/全角スペースは内部で正規化されます。
+
+## 8. APIヘルスチェック
+障害切り分け時は以下でAPI疎通を確認します。
+
+```powershell
+Invoke-WebRequest http://localhost:8080/api/categories | Select-Object -ExpandProperty StatusCode
+Invoke-WebRequest "http://localhost:8080/api/makers?category_id=01" | Select-Object -ExpandProperty StatusCode
+Invoke-WebRequest "http://localhost:8080/api/inventory?category_id=01&maker_id=02" | Select-Object -ExpandProperty StatusCode
+```
+
+期待値:
+- いずれも `200`
+
+## 9. データ運用
+### 9.1 バックアップ
+```powershell
+Copy-Item .\inventory.db .\backup_inventory_$(Get-Date -Format yyyyMMdd_HHmmss).db
+```
+
+### 9.2 リストア
+1. アプリ停止
+2. バックアップファイルを inventory.db に戻す
+3. `start-inventory-server.cmd` でアプリ再起動
+
+## 10. キャッシュ/表示不整合時の対応
+本アプリは Service Worker を使用します。画面が古い場合は以下を実施します。
+
+1. ブラウザでハードリロード（Ctrl + F5）
+2. 直らない場合は Service Worker を削除して再読み込み
+3. `/static/style-list.css` や `/static/script-list.js` の404が出る場合、古いキャッシュ参照の可能性が高いためキャッシュクリアを優先
+
+## 11. よくある障害と対処
+### 11.1 8080ポート使用中
+症状:
+- 起動時エラー、または `go run main.go` が失敗
+
+対処:
+- 既存プロセスを停止後に再起動
+
+```powershell
+$conn = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
+if ($conn) {
+  $pid = ($conn | Select-Object -First 1 -ExpandProperty OwningProcess)
+  Get-Process -Id $pid | Select-Object Id, ProcessName, Path
+  Stop-Process -Id $pid -Force
+}
+.\start-inventory-server.cmd
+```
+
+補足:
+- 本環境での実測では、占有元は `go run` が残した `main` プロセスでした。
+
+### 11.2 バーコード検索で 404
+症状:
+- `POST /api/barcode/search` が 404
+
+主因:
+- 製品コードが存在しない
+
+対処:
+- コード値を再確認
+- 先頭/末尾空白や全角文字の混入を確認
+
+### 11.3 出庫で在庫不足
+症状:
+- `Insufficient stock`
+
+対処:
+- 現在庫を確認し、数量を調整
+
+### 11.4 無効なイベント指定
+症状:
+- `Invalid action`
+
+主因:
+- 対象外イベント（例: `temp`）を送信している
+
+対処:
+- `in` / `out` / `dispose` のいずれかを指定
+
+## 12. 運用上の注意
+- DBファイルを直接編集する場合は必ず停止中に実施
+- 本番運用に切り替える場合は DB参照先（inventory.db）を明確に変更管理する
+- DB参照先を切り替える場合は `INVENTORY_DB_PATH` または `INVENTORY_DB_DIR` のどちらを使うかを統一する
+- 更新前後で在庫値が元に戻るか、定期的に簡易検証する
+
+## 12.1 同時更新時の運用方針
+- 同一製品に対する同時操作は、画面上で連続クリックせず 1 操作ごとに通知表示を確認してから次操作を行う。
+- 複数端末運用時は、同一製品を同時に操作しないよう担当を分ける。
+- 在庫値に差異が出た場合は、直ちに `/api/barcode/search` で現在値を確認し、必要数だけ `in` または `out` で補正する。
+- 日次締め時にランダム3件以上の製品で在庫値を照合し、差異があれば運用ログへ記録する。
+
+## 12.2 異常系APIテスト結果（記録）
+- quantity不正: `quantity=0` / `quantity=-1` は `quantity must be greater than zero` を返すことを確認済み。
+- 不正product_cd: `inventory/update` は外部キー制約エラー、`barcode/search` は `Product not found` を返すことを確認済み。
+
+## 13. 参考（現行実装の要点）
+- API定義: main.go
+- 画面構成: index.html
+- 画面ロジック: script.js
+- スタイル: style.css
+- PWAキャッシュ: sw.js
+</file>
+
+<file path="README.md">
+# PC機器在庫管理アプリ
+
+Go + Gin + SQLite を使用したタブレット向けPC機器在庫管理Webアプリです。
+
+## 機能
+
+- バーコード入力または手動選択による製品入出庫管理
+- カテゴリ別製品フィルタリング
+- 在庫一覧表示と印刷
+- 全画面タブレットUI
+
+## 起動方法
+
+1. Goがインストールされていることを確認してください。
+2. 共有DBの参照先を確認します。このリポジトリでは、開発・本番の起動入口を `start-inventory-server.cmd` に統一します。
+3. 依存関係をインストール:
+   ```
+   go mod tidy
+   ```
+4. アプリをビルド:
+   ```
+   go build -o inventory-app
+   ```
+5. 実行:
+   ```
+  .\start-inventory-server.cmd
+   ```
+6. ブラウザでアクセス: http://localhost:8080
+
+補足:
+- バッチ実行時は `C:\Users\ks24.m-takahashi\Desktop\inventory.db` を参照します。
+- 直接 `go run main.go` する場合は、同じ環境変数を自分で設定してください。
+- 初期表示で旧CSSが出る事象を防ぐため、`sw.js` は `style.css` / `script.js` を network-first で取得します（オフライン時のみキャッシュ使用）。
+
+## 技術仕様
+
+- バックエンド: Go + Gin
+- データベース: SQLite (modernc.org/sqlite)
+- フロントエンド: HTML + CSS + JavaScript
+- CGO不要でクロスプラットフォーム対応
+
+## APIエンドポイント
+
+- `GET /api/products`: 製品リスト取得
+- `GET /api/inventory`: 在庫一覧取得
+- `POST /api/inventory/update`: 在庫更新 (入庫/出庫)
+- `POST /api/barcode/search`: バーコード検索
+
+## 製品DB管理・運用ガイド
+
+### データベース構造
+
+このアプリはSQLiteデータベースを使用し、以下の2つのテーブルで構成されています：
+
+#### productsテーブル
+- `id` (INTEGER PRIMARY KEY): 製品の一意の識別子
+- `category` (TEXT): 製品カテゴリ（例: マウス、ノートPC、一体型PC、モニター、セキュリティワイヤー）
+- `manufacturer` (TEXT): メーカー名
+- `name` (TEXT): 製品名
+- `barcode` (TEXT UNIQUE): バーコード（一意制約あり）
+
+#### inventoryテーブル
+- `product_id` (INTEGER PRIMARY KEY): productsテーブルのidを参照
+- `quantity` (INTEGER): 在庫数量（デフォルト0）
+
+### データベースファイルの場所
+
+- 優先1: 環境変数 `INVENTORY_DB_PATH` でDBファイルを直接指定
+- 優先2: 環境変数 `INVENTORY_DB_DIR` 配下の `inventory.db`
+- 優先3: `C:\Users\ks24.m-takahashi\Desktop\inventory.db` (既定値)
+
+開発時に共有フォルダを使う場合の例:
+
+```powershell
+$env:INVENTORY_DB_DIR = 'C:\Users\ks24.m-takahashi\Desktop'
+go run main.go
+```
+
+推奨起動方法:
+
+```powershell
+.\start-inventory-server.cmd
+```
+
+### 初期データ
+
+アプリ初回起動時に、サンプル製品データが自動挿入されます：
+- マウス: Logitech Wireless Mouse M100
+- セキュリティワイヤー: Kensington Lock
+- ノートPC: Dell XPS 13
+- 一体型PC: Apple iMac 24
+- モニター: Samsung 27" UHD Monitor
+
+### データ操作方法
+
+#### 製品の追加
+API経由での製品追加は現在サポートされていません。直接DB操作またはコード修正が必要です。
+
+#### 在庫の更新
+Web UIまたはAPI経由で入出庫操作を行います：
+```bash
+# 入庫例 (product_id=1, quantity=5)
+curl -X POST http://localhost:8080/api/inventory/update \
+  -H "Content-Type: application/json" \
+  -d '{"product_id": 1, "action": "in", "quantity": 5}'
+
+# 出庫例 (product_id=1, quantity=2)
+curl -X POST http://localhost:8080/api/inventory/update \
+  -H "Content-Type: application/json" \
+  -d '{"product_id": 1, "action": "out", "quantity": 2}'
+```
+
+#### バーコード検索
+```bash
+curl -X POST http://localhost:8080/api/barcode/search \
+  -H "Content-Type: application/json" \
+  -d '{"barcode": "490001"}'
+```
+
+### バックアップと運用
+
+#### バックアップ
+```bash
+# DBファイルをコピー
+cp inventory.db inventory.db.backup
+
+# 定期バックアップ（cron等で自動化推奨）
+cp inventory.db "inventory_$(date +%Y%m%d_%H%M%S).db"
+```
+
+#### リストア
+```bash
+# バックアップから復元
+cp inventory.db.backup inventory.db
+```
+
+#### データベースの最適化
+SQLiteは定期的なVACUUMが推奨されます：
+```sql
+-- SQLiteコマンドラインから実行
+VACUUM;
+```
+
+### 運用時の注意点
+
+1. **同時アクセス**: SQLiteはファイルロックを使用するため、同時書き込みに注意
+2. **データ整合性**: 外部キー制約によりproducts削除時はinventoryも連動
+3. **パフォーマンス**: 大量データ時はインデックス追加を検討
+4. **セキュリティ**: DBファイルは適切な権限設定を
+5. **監査**: 重要な操作はログを確認
+
+### トラブルシューティング
+
+#### DBファイルが破損した場合
+```bash
+# バックアップから復元
+cp inventory.db.backup inventory.db
+
+# または新規作成（サンプルデータ再挿入）
+rm inventory.db
+.\start-inventory-server.cmd
+```
+
+#### バーコード重複エラー
+バーコードはUNIQUE制約があるため、重複時はエラーが発生します。既存製品の確認を推奨。
+
+#### 在庫数量がマイナスになる場合
+UI/APIで数量チェックを実装済みですが、直接DB操作時は注意してください。
+</file>
+
+<file path="sw.js">
+/* Simple offline-first cache for local tablet usage.
+   - Caches UI shell (HTML/CSS/JS)
+   - Never caches API responses (keeps inventory consistent)
+*/
+
+const CACHE_NAME = "inventory-app-shell-v4";
+
+const SHELL_ASSETS = [
+  "/",
+  "/index.html",
+  "/manifest.webmanifest",
+  "/static/style.css",
+  "/static/script.js",
+  "/static/app-icon.svg"
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(SHELL_ASSETS))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k))));
+      await self.clients.claim();
+    })()
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+
+  // Do not cache API requests.
+  if (url.pathname.startsWith("/api/")) return;
+
+  // For navigations, prefer cache fallback.
+  if (req.mode === "navigate") {
+    event.respondWith(
+      (async () => {
+        try {
+          const fresh = await fetch(req);
+          const cache = await caches.open(CACHE_NAME);
+          cache.put("/", fresh.clone());
+          return fresh;
+        } catch {
+          const cached = await caches.match(req);
+          return cached || (await caches.match("/"));
+        }
+      })()
+    );
+    return;
+  }
+
+  // For CSS/JS, prefer network to avoid stale first render after deployments.
+  if (url.pathname === "/static/style.css" || url.pathname === "/static/script.js") {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(CACHE_NAME);
+        try {
+          const fresh = await fetch(req, { cache: "no-store" });
+          cache.put(req, fresh.clone());
+          return fresh;
+        } catch {
+          const cached = await caches.match(req);
+          if (cached) return cached;
+          return fetch(req);
+        }
+      })()
+    );
+    return;
+  }
+
+  // Cache-first for static assets.
+  event.respondWith(
+    (async () => {
+      const cached = await caches.match(req);
+      if (cached) return cached;
+      const fresh = await fetch(req);
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(req, fresh.clone());
+      return fresh;
+    })()
+  );
+});
+</file>
+
+<file path=".gitignore">
+.history/
+
+inventory.db
+inventory-app.exe
+</file>
+
+<file path="index.html">
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>PC機器在庫管理 - 機器一覧版</title>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/static/app-icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/static/app-icon.svg">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app">
+        <main class="main">
+            <section class="list-section">
+                <div class="list-header-row">
+                    <div class="list-tabs" role="tablist" aria-label="機器一覧切替タブ">
+                        <button type="button" class="list-tab-btn active" data-list-tab="main" role="tab" aria-selected="true">機器一覧</button>
+                    </div>
+                </div>
+
+                <div id="list-pane-main" class="list-pane active" role="tabpanel">
+                    <div class="category-selects">
+                        <div class="select-block">
+                            <label for="category-select" class="input-label">カテゴリー</label>
+                            <select id="category-select" class="category-select"></select>
+                        </div>
+                        <div class="select-block">
+                            <label for="maker-select" class="input-label">メーカー</label>
+                            <select id="maker-select" class="maker-select"></select>
+                        </div>
+                    </div>
+                    <div class="list-grid" id="device-list">
+                        <!-- 製品カードがここに入ります -->
+                    </div>
+                </div>
+            </section>
+
+            <section class="product-section" id="product-section">
+                <div class="barcode-input-container product-panel-barcode">
+                    <label class="input-label">Barcode Input / Search</label>
+                    <div class="input-group">
+                        <input
+                            type="text"
+                            id="barcode"
+                            placeholder="バーコードを読み取り　または　検索…"
+                            class="barcode-input"
+                        />
+                        <button id="search-barcode" class="search-btn">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="product-detail" id="product-detail">
+                    <div class="placeholder">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                        <p>製品を選択してください</p>
+                        <p class="description">左側の機器一覧から、製品を選択してください。</p>
+                        <button id="purchase-mode-toggle" class="purchase-mode-btn" type="button" aria-pressed="false">購入モード</button>
+                    </div>
+                </div>
+                <div class="execution-section">
+                    <button id="stock-in" class="action-btn in-btn">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22,4 12,14.01 9,11.01"></polyline>
+                        </svg>
+                        <span>入庫確定 (IN)</span>
+                    </button>
+                    <button id="stock-out" class="action-btn out-btn">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="m15 9-6 6"></path>
+                            <path d="m9 9 6 6"></path>
+                        </svg>
+                        <span>出庫確定 (OUT)</span>
+                    </button>
+                    <button id="stock-dispose" class="action-btn dispose-btn compact-btn" title="廃棄">
+                        <span>廃棄</span>
+                    </button>
+                    <button id="stock-purchase" class="action-btn purchase-btn compact-btn" title="在庫追加" hidden>
+                        <span>在庫追加</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+        <div class="notifications" id="notifications"></div>
+        <footer class="footer">
+            <span>System Version 1.0.0</span>
+            <span>Warehouse: WH-JP-001</span>
+        </footer>
+    </div>
+
+    <div id="confirm-modal" class="confirm-modal" aria-hidden="true">
+        <div class="confirm-modal-panel" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+            <h3 id="confirm-title">登録確認</h3>
+            <p id="confirm-message" class="confirm-message">この内容で登録しますか？</p>
+            <div class="confirm-actions">
+                <button id="confirm-no" class="confirm-btn cancel-btn" type="button">いいえ</button>
+                <button id="confirm-yes" class="confirm-btn ok-btn" type="button">はい</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+    <script>
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("/sw.js").catch(() => {});
+            });
+        }
+    </script>
+</body>
+</html>
+</file>
+
+<file path="main.go">
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	_ "modernc.org/sqlite"
+)
+
+func normalizeBarcodeInput(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+
+	var mapped []rune
+	for _, r := range trimmed {
+		switch {
+		case r == '\u3000':
+			mapped = append(mapped, ' ')
+		case r >= '！' && r <= '～':
+			mapped = append(mapped, r-0xFEE0)
+		default:
+			mapped = append(mapped, r)
+		}
+	}
+
+	return strings.TrimSpace(string(mapped))
+}
+
+// New schema types
+type CategoryDTO struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type MakerDTO struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type DepartmentDTO struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type StaffDTO struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	BusyoID string `json:"busyo_id"`
+}
+
+type ProductDTO struct {
+	ProductCD    string `json:"product_cd"`
+	ProductName  string `json:"product_name"`
+	CategoryID   string `json:"category_id"`
+	CategoryName string `json:"category_name"`
+	MakerID      string `json:"maker_id"`
+	MakerName    string `json:"maker_name"`
+	ModelNumber  string `json:"model_number"`
+	ProductInfo  string `json:"product_info"`
+	Remarks      string `json:"remarks"`
+}
+
+type InventoryItemDTO struct {
+	Product       ProductDTO `json:"product"`
+	StockQuantity int        `json:"stock_quantity"`
+	CreatedAt     string     `json:"created_at"`
+	UpdatedAt     string     `json:"updated_at"`
+}
+
+func resolveEventByAction(action string) (eventID string, eventName string, delta int, err error) {
+	switch action {
+	case "in":
+		eventName = "入庫"
+		delta = 1
+	case "out":
+		eventName = "出庫"
+		delta = -1
+	case "dispose":
+		eventName = "廃棄"
+		delta = -1
+	case "purchase":
+		delta = 1
+		err = db.QueryRow("SELECT id, name FROM event_master WHERE id = ?", "04").Scan(&eventID, &eventName)
+		if err != nil {
+			return "", "", 0, err
+		}
+		return eventID, eventName, delta, nil
+	default:
+		return "", "", 0, sql.ErrNoRows
+	}
+
+	err = db.QueryRow("SELECT id FROM event_master WHERE name = ?", eventName).Scan(&eventID)
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	return eventID, eventName, delta, nil
+}
+
+var db *sql.DB
+
+const defaultSharedDBPath = `C:\Users\ks24.m-takahashi\Desktop\inventory.db`
+
+func initDB(dbPath string) {
+	var err error
+	db, err = sql.Open("sqlite", dbPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Test connection
+	if err := db.Ping(); err != nil {
+		log.Fatal(err)
+	}
+
+	// Enable foreign keys
+	_, _ = db.Exec("PRAGMA foreign_keys = ON")
+
+	if err := ensureProductsBarcodeUniqueness(db); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := ensureStockLogSchema(db); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func resolveDBPath(baseDir string) string {
+	if dbPath := strings.TrimSpace(os.Getenv("INVENTORY_DB_PATH")); dbPath != "" {
+		return dbPath
+	}
+
+	if dbDir := strings.TrimSpace(os.Getenv("INVENTORY_DB_DIR")); dbDir != "" {
+		return filepath.Join(dbDir, "inventory.db")
+	}
+
+	_ = baseDir
+	return defaultSharedDBPath
+}
+
+func ensureProductsBarcodeUniqueness(db *sql.DB) error {
+	rows, err := db.Query(`
+		SELECT COALESCE(product_cd, '')
+		FROM products
+		WHERE COALESCE(product_cd, '') <> ''
+		GROUP BY product_cd
+		HAVING COUNT(1) > 1
+		ORDER BY product_cd
+		LIMIT 5
+	`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var duplicated []string
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return err
+		}
+		duplicated = append(duplicated, code)
+	}
+
+	if len(duplicated) > 0 {
+		return fmt.Errorf("products.product_cd has duplicates; resolve before startup (examples: %s)", strings.Join(duplicated, ", "))
+	}
+
+	_, err = db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS ux_products_product_cd
+		ON products(product_cd)
+		WHERE COALESCE(product_cd, '') <> ''
+	`)
+	return err
+}
+
+func ensureStockLogSchema(db *sql.DB) error {
+	var exists int
+	err := db.QueryRow("SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name='stock_log'").Scan(&exists)
+	if err != nil {
+		return err
+	}
+
+	if exists == 0 {
+		_, err = db.Exec(`
+			CREATE TABLE stock_log (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				created_at TIMESTAMP DEFAULT (DATETIME('now', '+9 hours')),
+				product_cd CHAR(13),
+				busyo_id CHAR(2),
+				kean_id VARCHAR(20),
+				event_id CHAR(2),
+				quantity INTEGER NOT NULL DEFAULT 1,
+				FOREIGN KEY (product_cd) REFERENCES products(product_cd),
+				FOREIGN KEY (busyo_id) REFERENCES booking_busyo(busyo_cd),
+				FOREIGN KEY (kean_id) REFERENCES booking_keanid(alias),
+				FOREIGN KEY (event_id) REFERENCES event_master(id)
+			)
+		`)
+		return err
+	}
+
+	rows, err := db.Query("PRAGMA table_info('stock_log')")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasQuantity := false
+	hasRequestID := false
+	idIsIntegerPK := false
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return err
+		}
+		if strings.EqualFold(name, "quantity") {
+			hasQuantity = true
+		}
+		if strings.EqualFold(name, "request_id") {
+			hasRequestID = true
+		}
+		if strings.EqualFold(name, "id") && pk == 1 {
+			upperType := strings.ToUpper(strings.TrimSpace(ctype))
+			if strings.Contains(upperType, "INT") {
+				idIsIntegerPK = true
+			}
+		}
+	}
+
+	if hasQuantity && idIsIntegerPK {
+		if !hasRequestID {
+			if _, err := db.Exec("ALTER TABLE stock_log ADD COLUMN request_id TEXT"); err != nil {
+				return err
+			}
+		}
+		_, err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS ux_stock_log_request_id ON stock_log(request_id) WHERE request_id IS NOT NULL")
+		return err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	if _, err := tx.Exec("PRAGMA foreign_keys = OFF"); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec("ALTER TABLE stock_log RENAME TO stock_log_old"); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(`
+		CREATE TABLE stock_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			created_at TIMESTAMP DEFAULT (DATETIME('now', '+9 hours')),
+			product_cd CHAR(13),
+			busyo_id CHAR(2),
+			kean_id VARCHAR(20),
+			event_id CHAR(2),
+			quantity INTEGER NOT NULL DEFAULT 1,
+			request_id TEXT,
+			FOREIGN KEY (product_cd) REFERENCES products(product_cd),
+			FOREIGN KEY (busyo_id) REFERENCES booking_busyo(busyo_cd),
+			FOREIGN KEY (kean_id) REFERENCES booking_keanid(alias),
+			FOREIGN KEY (event_id) REFERENCES event_master(id)
+		)
+	`); err != nil {
+		return err
+	}
+
+	insertSQL := `
+		INSERT INTO stock_log (created_at, product_cd, busyo_id, kean_id, event_id, quantity, request_id)
+		SELECT created_at, product_cd, busyo_id, kean_id, event_id, 1, NULL
+		FROM stock_log_old
+		ORDER BY created_at, rowid
+	`
+	if hasQuantity {
+		insertSQL = `
+			INSERT INTO stock_log (created_at, product_cd, busyo_id, kean_id, event_id, quantity, request_id)
+			SELECT created_at, product_cd, busyo_id, kean_id, event_id, COALESCE(quantity, 1), NULL
+			FROM stock_log_old
+			ORDER BY created_at, rowid
+		`
+	}
+
+	if _, err := tx.Exec(insertSQL); err != nil {
+		return fmt.Errorf("stock_log data migration failed: %w", err)
+	}
+
+	if _, err := tx.Exec("DROP TABLE stock_log_old"); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec("CREATE UNIQUE INDEX IF NOT EXISTS ux_stock_log_request_id ON stock_log(request_id) WHERE request_id IS NOT NULL"); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func main() {
+	exePath, err := os.Executable()
+	if err != nil {
+		log.Fatal(err)
+	}
+	baseDir := filepath.Dir(exePath)
+	if _, err := os.Stat(filepath.Join(baseDir, "index.html")); err != nil {
+		wd, wdErr := os.Getwd()
+		if wdErr != nil {
+			log.Fatal(wdErr)
+		}
+		baseDir = wd
+	}
+
+	// Run as a local "tablet app" by default - use DebugMode to see route errors
+	gin.SetMode(gin.DebugMode)
+
+	// Use the shared inventory.db path, preferring environment-based overrides.
+	initDB(resolveDBPath(baseDir))
+	defer db.Close()
+
+	r := gin.Default()
+	_ = r.SetTrustedProxies([]string{"127.0.0.1", "::1"})
+
+	// Serve static files
+	r.Static("/static", baseDir)
+	r.StaticFile("/manifest.webmanifest", filepath.Join(baseDir, "manifest.webmanifest"))
+	r.StaticFile("/sw.js", filepath.Join(baseDir, "sw.js"))
+	r.StaticFile("/index.html", filepath.Join(baseDir, "index.html"))
+
+	// New hierarchical API routes
+	r.GET("/api/categories", getCategories)
+	r.GET("/api/makers", getMakers)
+	r.GET("/api/departments", getDepartments)
+	r.GET("/api/staffs", getStaffs)
+	r.GET("/api/products", getProductsFiltered)
+	r.GET("/api/inventory", getInventory)
+	r.POST("/api/inventory/update", updateInventory)
+	r.POST("/api/barcode/search", searchByBarcode)
+
+	// Avoid noisy 404 in browsers.
+	r.GET("/favicon.ico", func(c *gin.Context) { c.Status(http.StatusNoContent) })
+
+	// Serve index.html
+	r.GET("/", func(c *gin.Context) {
+		c.File(filepath.Join(baseDir, "index.html"))
+	})
+
+	log.Println("Server starting on http://localhost:8080")
+	r.Run(":8080")
+}
+
+// getCategories returns all product categories
+func getCategories(c *gin.Context) {
+	rows, err := db.Query(`
+		SELECT id, name FROM product_category 
+		ORDER BY id
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var categories []CategoryDTO
+	for rows.Next() {
+		var cat CategoryDTO
+		if err := rows.Scan(&cat.ID, &cat.Name); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		categories = append(categories, cat)
+	}
+	c.JSON(http.StatusOK, categories)
+}
+
+// getMakers returns makers filtered by category_id (optional)
+func getMakers(c *gin.Context) {
+	categoryID := c.Query("category_id")
+
+	var rows *sql.Rows
+	var err error
+
+	if categoryID != "" {
+		// Get makers for a specific category
+		rows, err = db.Query(`
+			SELECT DISTINCT m.id, m.name 
+			FROM maker m
+			INNER JOIN products p ON p.maker_id = m.id
+			WHERE p.category_id = ?
+			ORDER BY m.id
+		`, categoryID)
+	} else {
+		// Get all makers
+		rows, err = db.Query(`
+			SELECT id, name FROM maker 
+			ORDER BY id
+		`)
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var makers []MakerDTO
+	for rows.Next() {
+		var maker MakerDTO
+		if err := rows.Scan(&maker.ID, &maker.Name); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		makers = append(makers, maker)
+	}
+	c.JSON(http.StatusOK, makers)
+}
+
+// getDepartments returns department master list
+func getDepartments(c *gin.Context) {
+	rows, err := db.Query(`
+		SELECT COALESCE(busyo_cd, ''), COALESCE(name, '')
+		FROM booking_busyo
+		ORDER BY busyo_cd
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var departments []DepartmentDTO
+	for rows.Next() {
+		var d DepartmentDTO
+		if err := rows.Scan(&d.ID, &d.Name); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		departments = append(departments, d)
+	}
+
+	c.JSON(http.StatusOK, departments)
+}
+
+// getStaffs returns staff master list
+func getStaffs(c *gin.Context) {
+	departmentID := c.Query("department_id")
+
+	var rows *sql.Rows
+	var err error
+
+	if departmentID != "" {
+		rows, err = db.Query(`
+			SELECT DISTINCT COALESCE(k.alias, ''), COALESCE(k.name, ''), COALESCE(k.busyo_id, '')
+			FROM booking_keanid k
+			INNER JOIN booking_busyo b ON b.busyo_cd = k.busyo_id
+			WHERE COALESCE(k.alias, '') <> ''
+			  AND b.busyo_cd = ?
+			ORDER BY alias
+		`, departmentID)
+	} else {
+		rows, err = db.Query(`
+			SELECT DISTINCT COALESCE(k.alias, ''), COALESCE(k.name, ''), COALESCE(k.busyo_id, '')
+			FROM booking_keanid k
+			INNER JOIN booking_busyo b ON b.busyo_cd = k.busyo_id
+			WHERE COALESCE(k.alias, '') <> ''
+			ORDER BY alias
+		`)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var staffs []StaffDTO
+	for rows.Next() {
+		var s StaffDTO
+		if err := rows.Scan(&s.ID, &s.Name, &s.BusyoID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		staffs = append(staffs, s)
+	}
+
+	c.JSON(http.StatusOK, staffs)
+}
+
+// getProductsFiltered returns products filtered by category_id and/or maker_id
+func getProductsFiltered(c *gin.Context) {
+	categoryID := c.Query("category_id")
+	makerID := c.Query("maker_id")
+
+	query := `
+		SELECT 
+			p.product_cd,
+			COALESCE(p.product_name, ''),
+			COALESCE(p.category_id, ''),
+			COALESCE(pc.name, ''),
+			COALESCE(p.maker_id, ''),
+			COALESCE(m.name, ''),
+			COALESCE(p.model_number, ''),
+			COALESCE(p.product_info, ''),
+			COALESCE(p.remarks, '')
+		FROM products p
+		LEFT JOIN product_category pc ON p.category_id = pc.id
+		LEFT JOIN maker m ON p.maker_id = m.id
+		WHERE 1=1
+	`
+
+	args := []interface{}{}
+
+	if categoryID != "" {
+		query += " AND p.category_id = ?"
+		args = append(args, categoryID)
+	}
+
+	if makerID != "" {
+		query += " AND p.maker_id = ?"
+		args = append(args, makerID)
+	}
+
+	query += " ORDER BY p.product_name"
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var products []ProductDTO
+	for rows.Next() {
+		var p ProductDTO
+		if err := rows.Scan(
+			&p.ProductCD, &p.ProductName, &p.CategoryID, &p.CategoryName,
+			&p.MakerID, &p.MakerName, &p.ModelNumber, &p.ProductInfo, &p.Remarks,
+		); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		products = append(products, p)
+	}
+	c.JSON(http.StatusOK, products)
+}
+
+// getInventory returns inventory items with product details
+func getInventory(c *gin.Context) {
+	categoryID := c.Query("category_id")
+	makerID := c.Query("maker_id")
+
+	query := `
+		SELECT 
+			p.product_cd,
+			COALESCE(p.product_name, ''),
+			COALESCE(p.category_id, ''),
+			COALESCE(pc.name, ''),
+			COALESCE(p.maker_id, ''),
+			COALESCE(m.name, ''),
+			COALESCE(p.model_number, ''),
+			COALESCE(p.product_info, ''),
+			COALESCE(p.remarks, ''),
+			COALESCE(i.stock_quantity, 0), 
+			COALESCE(i.created_at, ''), COALESCE(i.updated_at, '')
+		FROM products p
+		LEFT JOIN product_category pc ON p.category_id = pc.id
+		LEFT JOIN maker m ON p.maker_id = m.id
+		LEFT JOIN inventory i ON p.product_cd = i.product_cd
+		WHERE 1=1
+	`
+
+	args := []interface{}{}
+
+	if categoryID != "" {
+		query += " AND p.category_id = ?"
+		args = append(args, categoryID)
+	}
+
+	if makerID != "" {
+		query += " AND p.maker_id = ?"
+		args = append(args, makerID)
+	}
+
+	query += " ORDER BY p.product_name"
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var inventory []InventoryItemDTO
+	for rows.Next() {
+		var item InventoryItemDTO
+		if err := rows.Scan(
+			&item.Product.ProductCD, &item.Product.ProductName,
+			&item.Product.CategoryID, &item.Product.CategoryName,
+			&item.Product.MakerID, &item.Product.MakerName,
+			&item.Product.ModelNumber, &item.Product.ProductInfo, &item.Product.Remarks,
+			&item.StockQuantity, &item.CreatedAt, &item.UpdatedAt,
+		); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		inventory = append(inventory, item)
+	}
+	c.JSON(http.StatusOK, inventory)
+}
+
+// updateInventory updates stock quantity
+func updateInventory(c *gin.Context) {
+	var req struct {
+		ProductCD    string `json:"product_cd"`
+		Action       string `json:"action"` // "in", "out", "dispose" or "purchase"
+		Quantity     int    `json:"quantity"`
+		DepartmentID string `json:"department_id"`
+		StaffID      string `json:"staff_id"`
+		RequestID    string `json:"request_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.ProductCD == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "product_cd is required"})
+		return
+	}
+	if req.Quantity <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "quantity must be greater than zero"})
+		return
+	}
+	requiresDepartment := req.Action != "purchase"
+	if requiresDepartment && req.DepartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "department_id is required"})
+		return
+	}
+	if !requiresDepartment {
+		req.DepartmentID = ""
+		req.StaffID = ""
+	}
+
+	eventID, eventName, delta, eventErr := resolveEventByAction(req.Action)
+	if eventErr == sql.ErrNoRows {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action"})
+		return
+	}
+	if eventErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "event_master lookup failed"})
+		return
+	}
+
+	var err error
+	if requiresDepartment {
+		var departmentCount int
+		err = db.QueryRow("SELECT COUNT(1) FROM booking_busyo WHERE busyo_cd = ?", req.DepartmentID).Scan(&departmentCount)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if departmentCount == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid department_id"})
+			return
+		}
+	}
+
+	if requiresDepartment && req.StaffID != "" {
+		var staffCount int
+		err = db.QueryRow(
+			`SELECT COUNT(1)
+			 FROM booking_keanid k
+			 INNER JOIN booking_busyo b ON b.busyo_cd = k.busyo_id
+			 WHERE k.alias = ? AND b.busyo_cd = ?`,
+			req.StaffID,
+			req.DepartmentID,
+		).Scan(&staffCount)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if staffCount == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "staff_id does not belong to department_id"})
+			return
+		}
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	if req.RequestID != "" {
+		var reqDupCount int
+		err = tx.QueryRow("SELECT COUNT(1) FROM stock_log WHERE request_id = ?", req.RequestID).Scan(&reqDupCount)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if reqDupCount > 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"message":       "Duplicate request ignored",
+				"event_id":      eventID,
+				"event_name":    eventName,
+				"department_id": req.DepartmentID,
+				"staff_id":      req.StaffID,
+			})
+			return
+		}
+	}
+
+	var productExists int
+	err = tx.QueryRow("SELECT COUNT(1) FROM products WHERE product_cd = ?", req.ProductCD).Scan(&productExists)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if productExists == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product_cd"})
+		return
+	}
+
+	var currentQty int
+	err = tx.QueryRow("SELECT COALESCE(stock_quantity, 0) FROM inventory WHERE product_cd = ?", req.ProductCD).Scan(&currentQty)
+	if err != nil && err != sql.ErrNoRows {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	newQty := currentQty + (delta * req.Quantity)
+	if newQty < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Insufficient stock"})
+		return
+	}
+
+	var keanID interface{}
+	if req.StaffID != "" {
+		keanID = req.StaffID
+	} else {
+		keanID = nil
+	}
+
+	var busyoID interface{}
+	if req.DepartmentID != "" {
+		busyoID = req.DepartmentID
+	} else {
+		busyoID = nil
+	}
+
+	var requestID interface{}
+	if req.RequestID != "" {
+		requestID = req.RequestID
+	} else {
+		requestID = nil
+	}
+
+	stockLogRes, err := tx.Exec(`
+		INSERT OR IGNORE INTO stock_log (product_cd, busyo_id, kean_id, event_id, quantity, request_id)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, req.ProductCD, busyoID, keanID, eventID, req.Quantity, requestID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.RequestID != "" {
+		affected, affErr := stockLogRes.RowsAffected()
+		if affErr == nil && affected == 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"message":       "Duplicate request ignored",
+				"event_id":      eventID,
+				"event_name":    eventName,
+				"department_id": req.DepartmentID,
+				"staff_id":      req.StaffID,
+			})
+			return
+		}
+	}
+
+	// Insert or update inventory
+	_, err = tx.Exec(`
+		INSERT INTO inventory (product_cd, stock_quantity, created_at, updated_at)
+		VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT(product_cd) DO UPDATE SET 
+			stock_quantity = excluded.stock_quantity,
+			updated_at = CURRENT_TIMESTAMP
+	`, req.ProductCD, newQty)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "Inventory updated",
+		"event_id":      eventID,
+		"event_name":    eventName,
+		"department_id": req.DepartmentID,
+		"staff_id":      req.StaffID,
+	})
+}
+
+// searchByBarcode searches product by barcode
+func searchByBarcode(c *gin.Context) {
+	var req struct {
+		Barcode string `json:"barcode"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	normalizedBarcode := normalizeBarcodeInput(req.Barcode)
+	if normalizedBarcode == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Barcode is required"})
+		return
+	}
+
+	var item InventoryItemDTO
+	err := db.QueryRow(`
+		SELECT 
+			p.product_cd,
+			COALESCE(p.product_name, ''),
+			COALESCE(p.category_id, ''),
+			COALESCE(pc.name, ''),
+			COALESCE(p.maker_id, ''),
+			COALESCE(m.name, ''),
+			COALESCE(p.model_number, ''),
+			COALESCE(p.product_info, ''),
+			COALESCE(p.remarks, ''),
+			COALESCE(i.stock_quantity, 0), 
+			COALESCE(i.created_at, ''), COALESCE(i.updated_at, '')
+		FROM products p
+		LEFT JOIN product_category pc ON p.category_id = pc.id
+		LEFT JOIN maker m ON p.maker_id = m.id
+		LEFT JOIN inventory i ON p.product_cd = i.product_cd
+		WHERE p.product_cd = ?
+	`, normalizedBarcode).Scan(
+		&item.Product.ProductCD, &item.Product.ProductName,
+		&item.Product.CategoryID, &item.Product.CategoryName,
+		&item.Product.MakerID, &item.Product.MakerName,
+		&item.Product.ModelNumber, &item.Product.ProductInfo, &item.Product.Remarks,
+		&item.StockQuantity, &item.CreatedAt, &item.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+		return
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, item)
+}
+</file>
+
+<file path="script.js">
+document.addEventListener('DOMContentLoaded', function () {
+    var barcodeInput = document.getElementById('barcode');
+    var searchBarcodeBtn = document.getElementById('search-barcode');
+    var categorySelect = document.getElementById('category-select');
+    var makerSelect = document.getElementById('maker-select');
+    var deviceList = document.getElementById('device-list');
+    var productDetail = document.getElementById('product-detail');
+    var stockInBtn = document.getElementById('stock-in');
+    var stockOutBtn = document.getElementById('stock-out');
+    var stockDisposeBtn = document.getElementById('stock-dispose');
+    var stockPurchaseBtn = document.getElementById('stock-purchase');
+    var executionSection = document.querySelector('.execution-section');
+    var confirmModal = document.getElementById('confirm-modal');
+    var confirmMessage = document.getElementById('confirm-message');
+    var confirmNoBtn = document.getElementById('confirm-no');
+    var confirmYesBtn = document.getElementById('confirm-yes');
+    var notifications = document.getElementById('notifications');
+    var listTabButtons = document.querySelectorAll('.list-tab-btn');
+    var listPaneMain = document.getElementById('list-pane-main');
+    var listPane1 = document.getElementById('list-pane-1');
+    var listPane2 = document.getElementById('list-pane-2');
+
+    var categories = [];
+    var makers = [];
+    var departments = [];
+    var staffs = [];
+    var inventoryItems = [];
+    var selectedCategory = '';
+    var selectedMaker = '';
+    var selectedDepartment = '';
+    var selectedStaff = '';
+    var currentProduct = null;
+    var pendingUpdate = null;
+    var currentPhase = 'category';
+    var currentListTab = 'main';
+    var numpadRoot = null;
+    var isSubmittingUpdate = false;
+    var isPurchaseMode = false;
+
+    function setActiveListTab(tabName) {
+        currentListTab = tabName;
+
+        for (var i = 0; i < listTabButtons.length; i++) {
+            var btn = listTabButtons[i];
+            var isActive = btn.dataset && btn.dataset.listTab === tabName;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        }
+
+        if (listPaneMain) {
+            var mainActive = tabName === 'main';
+            listPaneMain.classList.toggle('active', mainActive);
+            listPaneMain.setAttribute('aria-hidden', mainActive ? 'false' : 'true');
+        }
+        if (listPane1) {
+            var pane1Active = tabName === 'list1';
+            listPane1.classList.toggle('active', pane1Active);
+            listPane1.setAttribute('aria-hidden', pane1Active ? 'false' : 'true');
+        }
+        if (listPane2) {
+            var pane2Active = tabName === 'list2';
+            listPane2.classList.toggle('active', pane2Active);
+            listPane2.setAttribute('aria-hidden', pane2Active ? 'false' : 'true');
+        }
+
+        if (tabName !== 'main') {
+            currentProduct = null;
+            renderDefaultPlaceholder();
+            updateRegistrationFlowState();
+        }
+    }
+
+    function createRequestId() {
+        return 'req-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    }
+
+    function getSelectedCategoryName() {
+        if (!selectedCategory) return '';
+        for (var i = 0; i < categories.length; i++) {
+            if (categories[i].id === selectedCategory) return categories[i].name || '';
+        }
+        return '';
+    }
+
+    function shouldShowStockStatusByCategory(categoryName) {
+        return categoryName === 'ノートPC' || categoryName === '一体型PC' || categoryName === 'モニター';
+    }
+
+    function shouldHideQuantitySelectorByCategory(categoryName) {
+        return shouldShowStockStatusByCategory(categoryName);
+    }
+
+    function getStockDisplayText(stockQuantity, categoryName) {
+        if (shouldShowStockStatusByCategory(categoryName)) {
+            return Number(stockQuantity) > 0 ? '在庫あり' : '在庫なし';
+        }
+        return String(stockQuantity);
+    }
+
+    function getFilteredStaffs() {
+        if (!selectedDepartment) return [];
+        return staffs.filter(function (staff) {
+            return (staff.busyo_id || '') === selectedDepartment;
+        });
+    }
+
+    function getActionLabel(action) {
+        if (action === 'in') return '入庫';
+        if (action === 'out') return '出庫';
+        if (action === 'dispose') return '廃棄';
+        if (action === 'purchase') return '在庫追加';
+        return action || '';
+    }
+
+    function bindPurchaseModeButton() {
+        var purchaseModeToggleBtn = document.getElementById('purchase-mode-toggle');
+        if (!purchaseModeToggleBtn) return;
+
+        purchaseModeToggleBtn.setAttribute('aria-pressed', isPurchaseMode ? 'true' : 'false');
+        purchaseModeToggleBtn.classList.toggle('active', isPurchaseMode);
+        purchaseModeToggleBtn.textContent = isPurchaseMode ? '購入モード中（解除）' : '購入モード';
+        purchaseModeToggleBtn.onclick = function () {
+            setPurchaseMode(!isPurchaseMode);
+        };
+    }
+
+    function setPurchaseMode(enabled) {
+        isPurchaseMode = !!enabled;
+        if (isPurchaseMode) {
+            selectedDepartment = '';
+            selectedStaff = '';
+            setActiveListTab('main');
+        }
+
+        if (currentProduct) {
+            selectProduct(currentProduct);
+        } else {
+            renderDefaultPlaceholder();
+        }
+        updateRegistrationFlowState();
+
+        if (isPurchaseMode && barcodeInput) {
+            setTimeout(function () {
+                barcodeInput.focus();
+            }, 0);
+        }
+    }
+
+    function setActionButtonVisible(button, visible) {
+        if (!button) return;
+        button.hidden = !visible;
+        button.classList.toggle('is-hidden', !visible);
+    }
+
+    function updateRegistrationFlowState() {
+        var hasProduct = !!currentProduct;
+        var hasDepartment = !!selectedDepartment;
+        var canChooseQuantity = hasProduct && (isPurchaseMode || hasDepartment);
+        var currentStock = hasProduct ? Number(currentProduct.stock_quantity || 0) : 0;
+        var currentCategoryName = hasProduct && currentProduct.product ? (currentProduct.product.category_name || '') : '';
+        var isUniqueBarcodeCategory = shouldShowStockStatusByCategory(currentCategoryName);
+        var canStockOut = !isPurchaseMode && canChooseQuantity && currentStock > 0;
+        var canStockIn = !isPurchaseMode && canChooseQuantity && !(isUniqueBarcodeCategory && currentStock > 0);
+        var canDispose = !isPurchaseMode && canChooseQuantity;
+        var canPurchase = isPurchaseMode && hasProduct;
+
+        var quantityInput = document.getElementById('quantity');
+        var minusBtn = document.getElementById('quantity-minus');
+        var plusBtn = document.getElementById('quantity-plus');
+
+        if (quantityInput) quantityInput.disabled = !canChooseQuantity;
+        if (minusBtn) minusBtn.disabled = !canChooseQuantity;
+        if (plusBtn) plusBtn.disabled = !canChooseQuantity;
+
+        if (stockInBtn) stockInBtn.disabled = !canStockIn;
+        if (stockOutBtn) stockOutBtn.disabled = !canStockOut;
+        if (stockDisposeBtn) stockDisposeBtn.disabled = !canDispose;
+        if (stockPurchaseBtn) stockPurchaseBtn.disabled = !canPurchase;
+
+        setActionButtonVisible(stockInBtn, !isPurchaseMode);
+        setActionButtonVisible(stockOutBtn, !isPurchaseMode);
+        setActionButtonVisible(stockDisposeBtn, !isPurchaseMode);
+        setActionButtonVisible(stockPurchaseBtn, isPurchaseMode);
+        if (executionSection) executionSection.classList.toggle('purchase-mode', isPurchaseMode);
+    }
+
+    function requestJSON(url, options, onSuccess, onError) {
+        fetch(url, options || {})
+            .then(function (res) {
+                return res.json().then(function (json) {
+                    if (!res.ok) throw json;
+                    return json;
+                });
+            })
+            .then(onSuccess)
+            .catch(function (err) {
+                if (onError) onError(err);
+            });
+    }
+
+    function normalizeBarcodeInput(value) {
+        if (!value) return '';
+        return value.replace(/[\u3000]/g, ' ').replace(/[！-～]/g, function (ch) {
+            return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+        }).trim();
+    }
+
+    function buildBarcodeNumpad() {
+        if (numpadRoot) return;
+
+        var root = document.createElement('div');
+        root.id = 'barcode-numpad';
+        root.className = 'barcode-numpad';
+        root.setAttribute('aria-hidden', 'true');
+
+        root.innerHTML =
+            '<div class="barcode-numpad-panel" role="dialog" aria-label="バーコード入力テンキー">' +
+            '<div class="barcode-numpad-head">' +
+            '<span>テンキー入力</span>' +
+            '<button type="button" class="numpad-close" data-key="close" aria-label="閉じる">×</button>' +
+            '</div>' +
+            '<div class="barcode-numpad-grid">' +
+            '<button type="button" data-key="7">7</button>' +
+            '<button type="button" data-key="8">8</button>' +
+            '<button type="button" data-key="9">9</button>' +
+            '<button type="button" data-key="4">4</button>' +
+            '<button type="button" data-key="5">5</button>' +
+            '<button type="button" data-key="6">6</button>' +
+            '<button type="button" data-key="1">1</button>' +
+            '<button type="button" data-key="2">2</button>' +
+            '<button type="button" data-key="3">3</button>' +
+            '<button type="button" class="numpad-secondary" data-key="clear">C</button>' +
+            '<button type="button" data-key="0">0</button>' +
+            '<button type="button" class="numpad-secondary" data-key="backspace">⌫</button>' +
+            '</div>' +
+            '<div class="barcode-numpad-foot">' +
+            '<button type="button" class="numpad-enter" data-key="enter">検索</button>' +
+            '</div>' +
+            '</div>';
+
+        root.addEventListener('click', function (event) {
+            var target = event.target;
+            if (!(target instanceof HTMLElement)) return;
+            var key = target.dataset ? target.dataset.key : '';
+            if (!key) return;
+
+            if (key === 'close') {
+                hideBarcodeNumpad();
+                return;
+            }
+            if (key === 'clear') {
+                barcodeInput.value = '';
+                barcodeInput.focus();
+                return;
+            }
+            if (key === 'backspace') {
+                barcodeInput.value = barcodeInput.value.slice(0, -1);
+                barcodeInput.focus();
+                return;
+            }
+            if (key === 'enter') {
+                hideBarcodeNumpad();
+                searchByBarcode();
+                return;
+            }
+
+            barcodeInput.value += key;
+            barcodeInput.focus();
+        });
+
+        document.body.appendChild(root);
+        numpadRoot = root;
+    }
+
+    function showBarcodeNumpad() {
+        if (!numpadRoot) return;
+        numpadRoot.classList.add('visible');
+        numpadRoot.setAttribute('aria-hidden', 'false');
+    }
+
+    function hideBarcodeNumpad() {
+        if (!numpadRoot) return;
+        numpadRoot.classList.remove('visible');
+        numpadRoot.setAttribute('aria-hidden', 'true');
+    }
+
+    function showNotification(message, type) {
+        if (!notifications) return;
+        var notification = document.createElement('div');
+        notification.className = 'notification ' + (type || 'in');
+        notification.innerHTML = '<div class="notification-icon"></div><span class="notification-message">' + message + '</span>';
+        notifications.appendChild(notification);
+        setTimeout(function () {
+            if (notification && notification.parentNode) notification.parentNode.removeChild(notification);
+        }, 3000);
+    }
+
+    function renderDefaultPlaceholder() {
+        productDetail.innerHTML =
+            '<div class="placeholder">' +
+            '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">' +
+            '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>' +
+            '</svg>' +
+            '<p>製品を選択してください</p>' +
+            '<p class="description">左側の機器一覧から、製品を選択してください。</p>' +
+            '<button id="purchase-mode-toggle" class="purchase-mode-btn" type="button" aria-pressed="false">購入モード</button>' +
+            '</div>';
+        bindPurchaseModeButton();
+    }
+
+    function updateSelectPlaceholderState(selectEl) {
+        if (!selectEl) return;
+        selectEl.classList.toggle('is-placeholder', !selectEl.value);
+    }
+
+    function renderCategorySelect() {
+        categorySelect.innerHTML = '';
+        var defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '選択してください';
+        categorySelect.appendChild(defaultOpt);
+        for (var i = 0; i < categories.length; i++) {
+            var cat = categories[i];
+            var opt = document.createElement('option');
+            opt.value = cat.id;
+            opt.textContent = cat.name;
+            if (selectedCategory === cat.id) opt.selected = true;
+            categorySelect.appendChild(opt);
+        }
+        updateSelectPlaceholderState(categorySelect);
+        // イベント
+        categorySelect.onchange = function () {
+            selectedCategory = categorySelect.value;
+            updateSelectPlaceholderState(categorySelect);
+            selectedMaker = '';
+            currentPhase = selectedCategory ? 'maker' : 'category';
+            currentProduct = null;
+            renderDefaultPlaceholder();
+            if (selectedCategory) {
+                loadMakers(selectedCategory);
+            } else {
+                makers = [];
+                renderMakerSelect();
+                renderDeviceList();
+            }
+        };
+    }
+
+    function renderMakerSelect() {
+        makerSelect.innerHTML = '';
+        var defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '選択してください';
+        makerSelect.appendChild(defaultOpt);
+        if (currentPhase === 'category' || !makers.length) {
+            makerSelect.disabled = true;
+            updateSelectPlaceholderState(makerSelect);
+            return;
+        }
+        makerSelect.disabled = false;
+        for (var i = 0; i < makers.length; i++) {
+            var maker = makers[i];
+            var opt = document.createElement('option');
+            opt.value = maker.id;
+            opt.textContent = maker.name;
+            if (selectedMaker === maker.id) opt.selected = true;
+            makerSelect.appendChild(opt);
+        }
+        updateSelectPlaceholderState(makerSelect);
+        makerSelect.onchange = function () {
+            selectedMaker = makerSelect.value;
+            updateSelectPlaceholderState(makerSelect);
+            currentPhase = selectedMaker ? 'product' : 'maker';
+            currentProduct = null;
+            renderDefaultPlaceholder();
+            if (selectedMaker) {
+                loadInventory(selectedCategory, selectedMaker);
+            } else {
+                inventoryItems = [];
+                renderDeviceList();
+            }
+        };
+    }
+
+    function renderDeviceList() {
+        deviceList.innerHTML = '';
+        var selectedCategoryName = getSelectedCategoryName();
+
+        if (currentPhase === 'category') {
+            deviceList.innerHTML = '<div class="placeholder"><p>カテゴリを選択してください</p></div>';
+            return;
+        }
+        if (currentPhase === 'maker') {
+            deviceList.innerHTML = '<div class="placeholder"><p>メーカーを選択してください</p></div>';
+            return;
+        }
+        if (!inventoryItems || inventoryItems.length === 0) {
+            deviceList.innerHTML = '<div class="placeholder"><p>該当する製品がありません。</p></div>';
+            return;
+        }
+
+        for (var i = 0; i < inventoryItems.length; i++) {
+            (function (item) {
+                var card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'device-card';
+                var stockDisplayText = getStockDisplayText(item.stock_quantity, selectedCategoryName);
+                card.innerHTML =
+                    '<div class="device-card-header">' +
+                    '<div class="device-title-block">' +
+                    '<div class="device-name">' + (item.product.product_name || '-') + '</div>' +
+                    '<div class="device-barcode"><span class="device-barcode-label">バーコード</span>: <span class="device-barcode-value">' + (item.product.product_cd || '-') + '</span></div>' +
+                    '</div>' +
+                    '<div class="device-meta device-stock"><span><strong>' + stockDisplayText + '</strong></span></div>' +
+                    '</div>';
+                card.addEventListener('click', function () {
+                    var cards = document.querySelectorAll('.device-card');
+                    for (var j = 0; j < cards.length; j++) cards[j].classList.remove('active');
+                    card.classList.add('active');
+                    selectProduct(item);
+                });
+                deviceList.appendChild(card);
+            })(inventoryItems[i]);
+        }
+    }
+
+    function selectProduct(item) {
+        currentProduct = item;
+        var selectedCategoryName = getSelectedCategoryName();
+        var productCategoryName = (item && item.product && item.product.category_name) ? item.product.category_name : selectedCategoryName;
+        var currentStockText = getStockDisplayText(item.stock_quantity, productCategoryName);
+        var productInfoText = (item && item.product && item.product.product_info) ? item.product.product_info : '-';
+        var shouldHideQuantitySelector = shouldHideQuantitySelectorByCategory(productCategoryName);
+        var quantitySectionHtml = '';
+        var eventInputSectionHtml = '';
+        var modeBannerHtml = '';
+
+        if (isPurchaseMode) {
+            modeBannerHtml =
+                '<div class="purchase-mode-banner">' +
+                '<span>購入モード中</span>' +
+                '<button id="purchase-mode-toggle" class="purchase-mode-btn inline" type="button" aria-pressed="true">解除</button>' +
+                '</div>';
+            eventInputSectionHtml =
+                '<div class="event-input-section purchase-mode-note">' +
+                '<span class="section-label">購入モード</span>' +
+                '<p class="purchase-mode-note-text">部署・職員の選択は不要です。在庫追加のみ実行できます。</p>' +
+                '</div>';
+        } else {
+            eventInputSectionHtml =
+                '<div class="event-input-section">' +
+                '<span class="section-label">部署・職員選択</span>' +
+                '<div class="event-select-grid">' +
+                '<div class="event-select-block">' +
+                '<label for="department-select" class="event-label">部署</label>' +
+                '<select id="department-select" class="event-select"></select>' +
+                '</div>' +
+                '<div class="event-select-block">' +
+                '<label for="staff-select" class="event-label">職員名</label>' +
+                '<select id="staff-select" class="event-select"></select>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
+        }
+
+        if (!shouldHideQuantitySelector) {
+            quantitySectionHtml =
+                '<div class="quantity-adjust">' +
+                '<span class="section-label">個数選択</span>' +
+                '<div class="quantity-controls">' +
+                '<button id="quantity-minus" class="quantity-btn" type="button">-</button>' +
+                '<input type="number" id="quantity" min="1" value="1" class="quantity-input">' +
+                '<button id="quantity-plus" class="quantity-btn" type="button">+</button>' +
+                '</div>' +
+                '</div>';
+        }
+        productDetail.innerHTML =
+            modeBannerHtml +
+            '<div class="product-header">' +
+            '<div class="product-info">' +
+            '<span class="category-label">' + (item.product.category_name || '-') + '</span>' +
+            '<h1 class="product-name">' + (item.product.product_name || '-') + '</h1>' +
+            '</div>' +
+            '<button id="clear-product" class="clear-btn">CLEAR</button>' +
+            '</div>' +
+            '<div class="product-tags">' +
+            '<span class="tag maker">コード: ' + (item.product.product_cd || '-') + '</span>' +
+            '<span class="tag id">メーカー: ' + (item.product.maker_name || '-') + '</span>' +
+            '<span class="tag id">現在庫: ' + currentStockText + '</span>' +
+            '</div>' +
+            '<div class="product-info-block">' +
+            '<span class="section-label">製品情報</span>' +
+            '<p class="product-info-text">' + productInfoText + '</p>' +
+            '</div>' +
+            eventInputSectionHtml +
+            quantitySectionHtml +
+            '</div>';
+
+        document.getElementById('clear-product').addEventListener('click', function () {
+            currentProduct = null;
+            renderDefaultPlaceholder();
+        });
+
+        var quantityMinusBtn = document.getElementById('quantity-minus');
+        if (quantityMinusBtn) {
+            quantityMinusBtn.addEventListener('click', function () {
+                var input = document.getElementById('quantity');
+                var value = parseInt(input.value, 10) || 1;
+                input.value = Math.max(1, value - 1);
+            });
+        }
+
+        var quantityPlusBtn = document.getElementById('quantity-plus');
+        if (quantityPlusBtn) {
+            quantityPlusBtn.addEventListener('click', function () {
+                var input = document.getElementById('quantity');
+                var value = parseInt(input.value, 10) || 1;
+                input.value = value + 1;
+            });
+        }
+
+        var quantityInput = document.getElementById('quantity');
+        if (quantityInput) {
+            quantityInput.addEventListener('input', function () {
+                var v = parseInt(quantityInput.value, 10);
+                if (!v || v < 1) quantityInput.value = 1;
+            });
+        }
+
+        bindPurchaseModeButton();
+        if (!isPurchaseMode) {
+            renderDepartmentSelect();
+            renderStaffSelect();
+        }
+        updateRegistrationFlowState();
+    }
+
+    function renderDepartmentSelect() {
+        var departmentSelect = document.getElementById('department-select');
+        if (!departmentSelect) return;
+
+        departmentSelect.innerHTML = '';
+        departmentSelect.removeAttribute('size');
+        var defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '部署を選択してください';
+        departmentSelect.appendChild(defaultOpt);
+
+        for (var i = 0; i < departments.length; i++) {
+            var dep = departments[i];
+            var opt = document.createElement('option');
+            opt.value = dep.id;
+            opt.textContent = dep.name + ' (' + dep.id + ')';
+            if (selectedDepartment === dep.id) opt.selected = true;
+            departmentSelect.appendChild(opt);
+        }
+
+        departmentSelect.onchange = function () {
+            selectedDepartment = departmentSelect.value;
+            var filteredStaffs = getFilteredStaffs();
+            var staffStillValid = filteredStaffs.some(function (staff) {
+                return staff.id === selectedStaff;
+            });
+            if (!staffStillValid) selectedStaff = '';
+            renderStaffSelect();
+            updateRegistrationFlowState();
+        };
+    }
+
+    function renderStaffSelect() {
+        var staffSelect = document.getElementById('staff-select');
+        if (!staffSelect) return;
+
+        staffSelect.innerHTML = '';
+        var defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '職員を選択してください';
+        staffSelect.appendChild(defaultOpt);
+
+        var filteredStaffs = getFilteredStaffs();
+        var canChooseStaff = !!selectedDepartment;
+
+        for (var i = 0; i < filteredStaffs.length; i++) {
+            var staff = filteredStaffs[i];
+            var opt = document.createElement('option');
+            opt.value = staff.id;
+            opt.textContent = staff.name + ' (' + staff.id + ')';
+            if (selectedStaff === staff.id) opt.selected = true;
+            staffSelect.appendChild(opt);
+        }
+
+        staffSelect.disabled = !canChooseStaff;
+        if (!canChooseStaff) {
+            defaultOpt.textContent = '先に部署を選択してください';
+            staffSelect.removeAttribute('size');
+        } else if (filteredStaffs.length === 0) {
+            defaultOpt.textContent = 'この部署に所属する職員がいません';
+        } else {
+            staffSelect.removeAttribute('size');
+        }
+
+        staffSelect.onchange = function () {
+            selectedStaff = staffSelect.value;
+            updateRegistrationFlowState();
+        };
+    }
+
+    function loadDepartments() {
+        requestJSON('/api/departments', {}, function (data) {
+            departments = data || [];
+            renderDepartmentSelect();
+        }, function () {
+            showNotification('部署マスタの取得に失敗しました', 'out');
+        });
+    }
+
+    function loadStaffs() {
+        requestJSON('/api/staffs', {}, function (data) {
+            staffs = data || [];
+            renderStaffSelect();
+        }, function () {
+            showNotification('職員マスタの取得に失敗しました', 'out');
+        });
+    }
+
+    function closeConfirmModal() {
+        if (!confirmModal) return;
+        confirmModal.classList.remove('visible');
+        confirmModal.setAttribute('aria-hidden', 'true');
+        pendingUpdate = null;
+        isSubmittingUpdate = false;
+        if (confirmYesBtn) confirmYesBtn.disabled = false;
+        if (confirmNoBtn) confirmNoBtn.disabled = false;
+    }
+
+    function resetScreenState() {
+        selectedCategory = '';
+        selectedMaker = '';
+        selectedDepartment = '';
+        selectedStaff = '';
+        currentProduct = null;
+        currentPhase = 'category';
+        makers = [];
+        inventoryItems = [];
+
+        if (barcodeInput) barcodeInput.value = '';
+
+        renderCategorySelect();
+        renderMakerSelect();
+        renderDeviceList();
+        renderDefaultPlaceholder();
+        updateRegistrationFlowState();
+    }
+
+    function openConfirmModal(action) {
+        if (!currentProduct) {
+            showNotification('製品を選択してください', 'out');
+            return;
+        }
+
+        var currentStock = Number(currentProduct.stock_quantity || 0);
+        var currentCategoryName = currentProduct.product ? (currentProduct.product.category_name || '') : '';
+        var isUniqueBarcodeCategory = shouldShowStockStatusByCategory(currentCategoryName);
+
+        if (action === 'in' && isUniqueBarcodeCategory && currentStock > 0) {
+            showNotification('このカテゴリは在庫ありの場合、入庫できません', 'out');
+            return;
+        }
+
+        if (action === 'out' && currentStock <= 0) {
+            showNotification('在庫なし（0在庫）のため出庫できません', 'out');
+            return;
+        }
+
+        var quantityInput = document.getElementById('quantity');
+        var quantity = quantityInput ? parseInt(quantityInput.value, 10) || 1 : 1;
+        quantity = Math.max(1, quantity);
+
+        var departmentSelect = document.getElementById('department-select');
+        var staffSelect = document.getElementById('staff-select');
+        var departmentId = departmentSelect ? departmentSelect.value : '';
+        var staffId = staffSelect ? staffSelect.value : '';
+
+        if (action === 'purchase') {
+            departmentId = '';
+            staffId = '';
+        } else {
+            if (!departmentId) {
+                showNotification('部署を選択してください', 'out');
+                return;
+            }
+
+            selectedDepartment = departmentId;
+            selectedStaff = staffId;
+            updateRegistrationFlowState();
+        }
+
+        var actionLabel = getActionLabel(action);
+
+        var depLabel = (departmentSelect && departmentSelect.selectedIndex >= 0)
+            ? departmentSelect.options[departmentSelect.selectedIndex].text
+            : '';
+        var staffLabel = (staffId && staffSelect && staffSelect.selectedIndex >= 0)
+            ? staffSelect.options[staffSelect.selectedIndex].text
+            : '';
+
+        pendingUpdate = {
+            action: action,
+            quantity: quantity,
+            departmentId: departmentId,
+            staffId: staffId,
+            requestId: createRequestId()
+        };
+
+        if (confirmMessage) {
+            confirmMessage.innerHTML =
+                '製品: ' + (currentProduct.product.product_name || '-') + '<br>' +
+                'バーコード: ' + (currentProduct.product.product_cd || '-') + '<br>' +
+                'イベント: ' + actionLabel + '<br>' +
+                '数量: ' + quantity + '<br>' +
+                (action !== 'purchase' ? ('部署: ' + depLabel + '<br>') : '') +
+                (action !== 'purchase' && staffLabel ? ('職員: ' + staffLabel + '<br>') : '') +
+                '<br>' +
+                '登録しますか？';
+        }
+
+        if (confirmModal) {
+            confirmModal.classList.add('visible');
+            confirmModal.setAttribute('aria-hidden', 'false');
+        }
+    }
+
+    function loadCategories() {
+        requestJSON('/api/categories', {}, function (data) {
+            categories = data || [];
+            currentPhase = 'category';
+            selectedCategory = '';
+            selectedMaker = '';
+            renderCategorySelect();
+            renderMakerSelect();
+            renderDeviceList();
+        }, function () {
+            showNotification('カテゴリの取得に失敗しました', 'out');
+        });
+    }
+
+    function loadMakers(categoryId) {
+        requestJSON('/api/makers?category_id=' + encodeURIComponent(categoryId), {}, function (data) {
+            makers = data || [];
+            renderMakerSelect();
+            renderDeviceList();
+        }, function () {
+            showNotification('メーカーの取得に失敗しました', 'out');
+        });
+    }
+
+    function loadInventory(categoryId, makerId) {
+        var url = '/api/inventory?category_id=' + encodeURIComponent(categoryId) + '&maker_id=' + encodeURIComponent(makerId);
+        requestJSON(url, {}, function (data) {
+            inventoryItems = data || [];
+            renderDeviceList();
+        }, function () {
+            showNotification('在庫一覧の取得に失敗しました', 'out');
+        });
+    }
+
+    function updateStock(action, quantity, departmentId, staffId, requestId) {
+        requestJSON('/api/inventory/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                product_cd: currentProduct.product.product_cd,
+                action: action,
+                quantity: quantity,
+                department_id: departmentId,
+                staff_id: staffId,
+                request_id: requestId
+            })
+        }, function () {
+            isSubmittingUpdate = false;
+            var actionLabel = getActionLabel(action);
+            var noticeType = (action === 'in' || action === 'purchase') ? 'in' : 'out';
+            showNotification((currentProduct.product.product_name || '-') + ' を ' + quantity + '個 ' + actionLabel + 'しました。', noticeType);
+            closeConfirmModal();
+            resetScreenState();
+        }, function (err) {
+            isSubmittingUpdate = false;
+            if (confirmYesBtn) confirmYesBtn.disabled = false;
+            if (confirmNoBtn) confirmNoBtn.disabled = false;
+            var msg = (err && err.error) ? err.error : '更新に失敗しました';
+            showNotification(msg, 'out');
+        });
+    }
+
+    function searchByBarcode() {
+        var barcode = normalizeBarcodeInput(barcodeInput.value);
+        if (!barcode) {
+            showNotification('バーコードを入力してください', 'out');
+            return;
+        }
+        requestJSON('/api/barcode/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ barcode: barcode })
+        }, function (item) {
+            selectProduct(item);
+        }, function (err) {
+            var msg = (err && err.error) ? err.error : '製品が見つかりません';
+            showNotification(msg, 'out');
+        });
+    }
+
+    buildBarcodeNumpad();
+    setActionButtonVisible(stockInBtn, true);
+    setActionButtonVisible(stockOutBtn, true);
+    setActionButtonVisible(stockDisposeBtn, true);
+    setActionButtonVisible(stockPurchaseBtn, false);
+
+    for (var t = 0; t < listTabButtons.length; t++) {
+        listTabButtons[t].addEventListener('click', function (event) {
+            var target = event.currentTarget;
+            if (!target || !target.dataset) return;
+            setActiveListTab(target.dataset.listTab || 'main');
+        });
+    }
+    setActiveListTab('main');
+
+    barcodeInput.addEventListener('focus', showBarcodeNumpad);
+    barcodeInput.addEventListener('click', showBarcodeNumpad);
+    barcodeInput.addEventListener('touchstart', showBarcodeNumpad, { passive: true });
+
+    document.addEventListener('mousedown', function (event) {
+        if (!numpadRoot || !numpadRoot.classList.contains('visible')) return;
+        var target = event.target;
+        if (!(target instanceof Node)) return;
+        if (target === barcodeInput || barcodeInput.contains(target) || numpadRoot.contains(target)) return;
+        hideBarcodeNumpad();
+    });
+
+    document.addEventListener('touchstart', function (event) {
+        if (!numpadRoot || !numpadRoot.classList.contains('visible')) return;
+        var target = event.target;
+        if (!(target instanceof Node)) return;
+        if (target === barcodeInput || barcodeInput.contains(target) || numpadRoot.contains(target)) return;
+        hideBarcodeNumpad();
+    }, { passive: true });
+
+    searchBarcodeBtn.addEventListener('click', function () {
+        hideBarcodeNumpad();
+        searchByBarcode();
+    });
+    barcodeInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') searchByBarcode();
+    });
+    stockInBtn.addEventListener('click', function () { openConfirmModal('in'); });
+    stockOutBtn.addEventListener('click', function () { openConfirmModal('out'); });
+    if (stockDisposeBtn) {
+        stockDisposeBtn.addEventListener('click', function () { openConfirmModal('dispose'); });
+    }
+    if (stockPurchaseBtn) {
+        stockPurchaseBtn.addEventListener('click', function () { openConfirmModal('purchase'); });
+    }
+
+    if (confirmNoBtn) {
+        confirmNoBtn.addEventListener('click', closeConfirmModal);
+    }
+    if (confirmYesBtn) {
+        confirmYesBtn.addEventListener('click', function () {
+            if (isSubmittingUpdate) {
+                return;
+            }
+            if (!pendingUpdate || !currentProduct) {
+                closeConfirmModal();
+                return;
+            }
+            isSubmittingUpdate = true;
+            confirmYesBtn.disabled = true;
+            if (confirmNoBtn) confirmNoBtn.disabled = true;
+            updateStock(
+                pendingUpdate.action,
+                pendingUpdate.quantity,
+                pendingUpdate.departmentId,
+                pendingUpdate.staffId,
+                pendingUpdate.requestId
+            );
+        });
+    }
+    if (confirmModal) {
+        confirmModal.addEventListener('click', function (e) {
+            if (e.target === confirmModal) closeConfirmModal();
+        });
+    }
+
+    loadDepartments();
+    loadStaffs();
+
+    updateRegistrationFlowState();
+    renderDefaultPlaceholder();
+    loadCategories();
+});
+</file>
+
+<file path="style.css">
+/* Combined stylesheet for test pages
+   - Base: style.css
+   - Overrides/Additions: style-list.css (placed later to preserve "later wins" behavior)
+*/
+
+/* ===== Base (from style.css) ===== */
+/* Dark theme inspired by inventory-flow-pro */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #0a0a0a;
+    color: #f5f5f5;
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+.app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    padding: 1rem 1.5rem;
+    gap: 1rem;
+}
+
+.input-label {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #737373;
+    margin-left: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.input-group {
+    position: relative;
+}
+
+.barcode-input {
+    width: 100%;
+    background-color: #171717;
+    border: 2px solid #262626;
+    border-radius: 0.75rem;
+    padding: 0.75rem 3rem 0.75rem 3rem;
+    box-sizing: border-box;
+    font-size: 1.125rem;
+    outline: none;
+    transition: border-color 0.2s;
+    color: #f5f5f5;
+}
+
+.barcode-input:focus {
+    border-color: #3b82f6;
+}
+
+.product-panel-barcode {
+    padding: 1.5rem 2rem 1rem;
+    border-bottom: 1px solid #262626;
+}
+
+.barcode-input::placeholder {
+    color: #525252;
+}
+
+.search-btn {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #262626;
+    border: none;
+    padding: 0.375rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.search-btn:hover {
+    background-color: #404040;
+}
+
+.barcode-numpad {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    width: min(24rem, calc(100vw - 2rem));
+    aspect-ratio: 4 / 5;
+    z-index: 10000;
+    display: none;
+    pointer-events: none;
+}
+
+.barcode-numpad.visible {
+    display: block;
+    pointer-events: auto;
+}
+
+.barcode-numpad-panel {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(165deg, #575757 0%, #3f3f3f 100%);
+    border: 1px solid #8a8a8a;
+    border-radius: 1rem;
+    box-shadow: 0 22px 45px rgba(0, 0, 0, 0.45);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 0.5rem;
+    padding: 0.65rem;
+}
+
+.barcode-numpad-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #f5f5f5;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.barcode-numpad-head .numpad-close {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid #9a9a9a;
+    background: #4b4b4b;
+    color: #ffffff;
+    border-radius: 0.6rem;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.barcode-numpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.55rem;
+}
+
+.barcode-numpad-grid button,
+.barcode-numpad-foot .numpad-enter {
+    border: 1px solid #9f9f9f;
+    background: #5a5a5a;
+    color: #ffffff;
+    border-radius: 0.7rem;
+    font-size: 1.35rem;
+    font-weight: 800;
+    cursor: pointer;
+    min-height: 2.8rem;
+}
+
+.barcode-numpad-grid button:active,
+.barcode-numpad-foot .numpad-enter:active,
+.barcode-numpad-head .numpad-close:active {
+    transform: translateY(1px);
+    filter: brightness(0.94);
+}
+
+.barcode-numpad-grid .numpad-secondary {
+    background: #666666;
+}
+
+.barcode-numpad-foot .numpad-enter {
+    width: 100%;
+    background: #6a6a6a;
+    min-height: 3rem;
+    font-size: 1.1rem;
+}
+
+.icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #a3a3a3;
+}
+
+/* Main */
+.main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 1rem;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Product Section */
+.product-section {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 1.5rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.product-detail {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.product-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.product-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.category-label {
+    font-size: 0.7rem;
+    line-height: 1.1;
+}
+
+.product-name {
+    font-size: 1.8rem;
+    line-height: 1.1;
+    margin: 0;
+}
+
+.clear-btn {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.78rem;
+    border-radius: 0.45rem;
+}
+
+/* プルダウン用スタイル */
+/* カテゴリー・メーカー選択を縦並び＆大きく */
+.category-selects {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.select-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.category-selects .input-label {
+    font-size: 25px;
+    line-height: 1.05;
+    letter-spacing: 0.04em;
+    margin-left: 0.1rem;
+}
+
+/* プルダウンを大きく・ボタン風に */
+.category-select, .maker-select {
+    background-color: #232b3a;
+    border: 2px solid #3b82f6;
+    color: #fff;
+    border-radius: 0.8rem;
+    padding: 1.5rem 2.5rem;
+    font-size: 2.1rem;
+    min-width: 16rem;
+    font-weight: bold;
+    margin-right: 0;
+    box-shadow: 0 2px 8px rgba(60,100,200,0.10), 0 1.5px 0 #1e293b;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    appearance: none;
+    cursor: pointer;
+    max-height: 3.5em;
+    overflow-y: auto;
+}
+.category-select:hover, .maker-select:hover, .category-select:focus, .maker-select:focus {
+    background-color: #3b82f6;
+    color: #fff;
+    border-color: #60a5fa;
+    outline: none;
+}
+.category-select:disabled, .maker-select:disabled {
+    background-color: #262626;
+    color: #888;
+    border-color: #444;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+.category-select option, .maker-select option {
+    color: #222;
+    font-size: 1.7rem;
+    background: #fff;
+    max-height: 2.5em;
+}
+
+.category-select.is-placeholder,
+.maker-select.is-placeholder {
+    font-size: 1.68rem;
+}
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.clear-btn:hover {
+    color: #ef4444;
+}
+
+.product-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.tag {
+    padding: 0.25rem 0.75rem;
+    background-color: #262626;
+    border-radius: 9999px;
+    font-size: 1.4rem;
+    line-height: 1.1;
+    border: 1px solid #404040;
+}
+
+.tag.maker {
+    font-size: 1.4rem;
+}
+
+.tag.id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.4rem;
+}
+
+.product-info-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.product-info-text {
+    margin: 0;
+    padding: 0.55rem 0.75rem;
+    background-color: #171717;
+    border: 1px solid #303030;
+    border-radius: 0.6rem;
+    color: #d4d4d8;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 6.5rem;
+    overflow-y: auto;
+}
+
+/* Quantity Adjustment */
+.quantity-adjust {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.section-label {
+    font-size: 0.6rem;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #737373;
+}
+
+.quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.quantity-btn {
+    width: 2.8rem;
+    height: 2.8rem;
+    font-size: 1.7rem;
+    background-color: #262626;
+    border: 2px solid #404040;
+    border-radius: 0.8rem;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quantity-btn:hover {
+    background-color: #404040;
+}
+
+.quantity-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background-color: #1f2937;
+    border-color: #374151;
+}
+
+.quantity-input {
+    width: 4.5rem;
+    height: 2.8rem;
+    background-color: transparent;
+    border: none;
+    border-bottom: 3px solid #262626;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 900;
+    outline: none;
+    color: white;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+}
+
+.quantity-input::-webkit-outer-spin-button,
+.quantity-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.quantity-input:focus {
+    border-color: #3b82f6;
+}
+
+.quantity-input:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.event-input-section {
+    margin-top: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.event-select-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+}
+
+.event-select-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-height: 5.2rem;
+}
+
+.event-label {
+    font-size: 0.78rem;
+    color: #9ca3af;
+    letter-spacing: 0.03em;
+}
+
+.event-select {
+    background-color: #111827;
+    color: #f9fafb;
+    border: 1px solid #374151;
+    border-radius: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.98rem;
+    min-height: 3rem;
+}
+
+.event-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.event-select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #1f2937;
+}
+
+#staff-select[size] {
+    max-height: 12rem;
+    overflow-y: auto;
+}
+
+@media (min-width: 769px) {
+    .product-section {
+        min-height: 0;
+    }
+}
+
+.confirm-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 12000;
+}
+
+.confirm-modal.visible {
+    display: flex;
+}
+
+.confirm-modal-panel {
+    width: min(34rem, calc(100vw - 2rem));
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 0.9rem;
+    padding: 1.2rem;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+}
+
+.confirm-modal-panel h3 {
+    margin: 0 0 0.75rem;
+    font-size: 1.2rem;
+}
+
+.confirm-message {
+    margin: 0;
+    line-height: 1.6;
+    color: #d1d5db;
+}
+
+.confirm-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.confirm-btn {
+    border: none;
+    border-radius: 0.6rem;
+    min-width: 8.5rem;
+    padding: 0.75rem 1.25rem;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.cancel-btn {
+    background: #4b5563;
+    color: #ffffff;
+}
+
+.ok-btn {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+/* Execution Section */
+.execution-section {
+    flex-shrink: 0;
+    padding: 2rem;
+    border-top: 1px solid #262626;
+    background-color: rgba(23, 23, 23, 0.6);
+    backdrop-filter: blur(10px);
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 1.5rem;
+}
+
+.action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    height: 5rem;
+    border-radius: 1rem;
+    border: none;
+    color: white;
+    font-weight: 900;
+    font-size: 1.125rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+.in-btn {
+    background-color: #2563eb;
+    box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+}
+
+.in-btn:hover {
+    background-color: #1d4ed8;
+}
+
+.out-btn {
+    background-color: #dc2626;
+    box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.3);
+}
+
+.out-btn:hover {
+    background-color: #b91c1c;
+}
+
+.dispose-btn {
+    background-color: #374151;
+    box-shadow: 0 10px 15px -3px rgba(55, 65, 81, 0.35);
+}
+
+.dispose-btn:hover {
+    background-color: #4b5563;
+}
+
+.purchase-btn {
+    background-color: #0f766e;
+    box-shadow: 0 10px 15px -3px rgba(15, 118, 110, 0.35);
+}
+
+.purchase-btn:hover {
+    background-color: #0d9488;
+}
+
+.compact-btn {
+    width: 8.5rem;
+    height: 5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+.action-btn .icon {
+    width: 1.75rem;
+    height: 1.75rem;
+}
+
+.action-btn.is-hidden {
+    display: none !important;
+}
+
+.action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.execution-section.purchase-mode {
+    grid-template-columns: 1fr;
+}
+
+/* Notifications */
+.notifications {
+    position: fixed;
+    bottom: 5rem;
+    right: 2rem;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.notification {
+    padding: 1rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-left: 4px solid;
+    max-width: 20rem;
+    backdrop-filter: blur(10px);
+}
+
+.notification.in {
+    background-color: rgba(23, 23, 23, 0.9);
+    border-left-color: #3b82f6;
+    color: #dbeafe;
+}
+
+.notification.out {
+    background-color: rgba(23, 23, 23, 0.9);
+    border-left-color: #ef4444;
+    color: #fecaca;
+}
+
+.notification-icon {
+    padding: 0.375rem;
+    border-radius: 0.5rem;
+}
+
+.notification.in .notification-icon {
+    background-color: #3b82f6;
+}
+
+.notification.out .notification-icon {
+    background-color: #ef4444;
+}
+
+.notification-icon .icon {
+    width: 1rem;
+    height: 1rem;
+    color: white;
+}
+
+.notification-message {
+    font-weight: bold;
+    font-size: 0.875rem;
+}
+
+/* Footer */
+.footer {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0.25rem;
+    opacity: 0.2;
+    font-size: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    padding-bottom: 0.25rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .app {
+        padding: 0.5rem 1rem;
+    }
+
+    .header {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .status-indicator {
+        justify-self: flex-end;
+    }
+
+    .main {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .product-name {
+        font-size: 1.45rem;
+    }
+
+    .quantity-controls {
+        gap: 0.65rem;
+    }
+
+    .quantity-btn {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+
+    .quantity-input {
+        width: 4rem;
+        height: 2.5rem;
+        gap: 0.45rem;
+    }
+
+    .event-select-grid {
+        font-size: 0.72rem;
+    }
+
+        letter-spacing: 0.08em;
+        padding: 1rem;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .action-btn {
+        height: 4rem;
+        font-size: 1rem;
+    }
+
+    .notifications {
+        right: 1rem;
+        bottom: 4rem;
+    }
+
+    .barcode-numpad {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        bottom: 0.75rem;
+        width: min(23rem, calc(100vw - 1rem));
+    }
+}
+
+/* Placeholder state */
+.placeholder {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #737373;
+    gap: 1rem;
+    padding: 2rem;
+}
+
+.placeholder .icon {
+    width: 6rem;
+    height: 6rem;
+    opacity: 0.1;
+}
+
+.placeholder p {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #a3a3a3;
+    margin: 0;
+}
+
+.placeholder .description {
+    font-size: 0.875rem;
+    color: #737373;
+    max-width: 15rem;
+    line-height: 1.5;
+}
+
+.purchase-mode-btn {
+    margin-top: 0.5rem;
+    border: 1px solid #0f766e;
+    background: rgba(15, 118, 110, 0.2);
+    color: #99f6e4;
+    border-radius: 0.75rem;
+    padding: 0.55rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.purchase-mode-btn:hover {
+    background: rgba(15, 118, 110, 0.35);
+}
+
+.purchase-mode-btn.active {
+    border-color: #14b8a6;
+    background: rgba(20, 184, 166, 0.32);
+    color: #ccfbf1;
+}
+
+.purchase-mode-btn.inline {
+    margin-top: 0;
+    font-size: 0.82rem;
+    padding: 0.4rem 0.8rem;
+}
+
+.purchase-mode-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid rgba(20, 184, 166, 0.45);
+    border-radius: 0.75rem;
+    color: #99f6e4;
+    background: rgba(15, 118, 110, 0.14);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.purchase-mode-note-text {
+    margin: 0;
+    color: #9ca3af;
+    font-size: 0.9rem;
+}
+
+/* ===== List page overrides/additions (from style-list.css) ===== */
+.list-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 1.5rem;
+    padding: 0;
+}
+
+.list-header-row {
+    display: block;
+    padding: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(15, 23, 42, 0.7);
+}
+
+.list-tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+}
+
+.list-tab-btn {
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    background: rgba(15, 23, 42, 0.92);
+    color: #d1d5db;
+    width: 100%;
+    padding: 0.88rem 0.4rem;
+    border-radius: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.list-tab-btn + .list-tab-btn {
+    border-left-width: 0;
+}
+
+.list-tab-btn:hover {
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+
+.list-tab-btn.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+}
+
+.list-pane {
+    display: none;
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.list-pane.active {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.list-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    padding-bottom: 0.5rem;
+}
+
+.device-card {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem;
+    text-align: left;
+    border-radius: 1rem;
+    border: 2px solid #374151;
+    background-color: #1a1a2e;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
+}
+
+.device-card:hover {
+    transform: translateY(-2px);
+    border-color: #3b82f6;
+}
+
+.device-card.active {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: #3b82f6;
+}
+
+.device-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.device-name {
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.25;
+    color: #ffffff;
+}
+
+.device-title-block {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.device-barcode {
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.25;
+    color: #ffffff;
+}
+
+.device-barcode-label {
+    font-weight: 900;
+}
+
+.device-barcode-value {
+    font-weight: 400;
+}
+
+.device-meta {
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.78rem;
+    color: #9ca3af;
+}
+
+.device-stock {
+    font-size: 1rem;
+}
+
+.device-meta span {
+    display: inline-flex;
+    gap: 0.5rem;
+}
+
+.device-meta strong {
+    color: #f5f5f5;
+    font-weight: 700;
+}
+
+.list-section-heading {
+    font-size: 0.85rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #e5e7eb;
+    margin-top: 1rem;
+}
+
+.list-section-heading:first-of-type {
+    margin-top: 0;
+}
+
+.category-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-bottom: 0.75rem;
+}
+
+.category-button {
+    border: 1px solid #374151;
+    background-color: #1e293b;
+    color: #d1d5db;
+    font-size: 0.85rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.category-button:hover {
+    background-color: #1f2937;
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+
+.category-button.active {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+
+/* Overrides: keep later-wins behavior (same as loading style-list.css after style.css) */
+.product-panel-barcode {
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
+    border-bottom: 1px solid #262626;
+    box-sizing: border-box;
+}
+
+.product-detail {
+    min-height: 22rem;
+}
+
+.app {
+    padding: 1rem 1.5rem;
+}
+
+.main {
+    grid-template-columns: minmax(20rem, 30%) 1fr;
+}
+
+.list-section {
+    max-width: 30vw;
+}
+
+.placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #737373;
+    gap: 1rem;
+    padding: 2rem;
+}
+
+.placeholder .icon {
+    width: 6rem;
+    height: 6rem;
+    opacity: 0.12;
+}
+
+.placeholder p {
+    margin: 0;
+}
+
+.product-detail h2,
+.product-detail p,
+.product-detail .device-meta {
+    color: #f5f5f5;
+}
+
+@media (max-width: 1030px) {
+    .main {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .list-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .list-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</file>
+
+</files>
