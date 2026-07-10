@@ -193,6 +193,10 @@ func initDB(dbPath string) {
 		log.Fatal(err)
 	}
 
+	// Mitigate transient SQLITE_BUSY during schema checks/migrations.
+	_, _ = db.Exec("PRAGMA busy_timeout = 5000")
+	_, _ = db.Exec("PRAGMA journal_mode = WAL")
+
 	// Enable foreign keys
 	_, _ = db.Exec("PRAGMA foreign_keys = ON")
 
@@ -277,7 +281,6 @@ func ensureStockLogSchema(db *sql.DB) error {
 				quantity INTEGER NOT NULL DEFAULT 1,
 				FOREIGN KEY (product_cd) REFERENCES products(product_cd),
 				FOREIGN KEY (busyo_id) REFERENCES booking_busyo(busyo_cd),
-				FOREIGN KEY (kean_id) REFERENCES booking_keanid(alias),
 				FOREIGN KEY (event_id) REFERENCES event_master(id)
 			)
 		`)
@@ -293,6 +296,7 @@ func ensureStockLogSchema(db *sql.DB) error {
 	hasQuantity := false
 	hasRequestID := false
 	idIsIntegerPK := false
+	hasKeanForeignKey := false
 	for rows.Next() {
 		var cid int
 		var name, ctype string
@@ -315,7 +319,24 @@ func ensureStockLogSchema(db *sql.DB) error {
 		}
 	}
 
-	if hasQuantity && idIsIntegerPK {
+	fkRows, err := db.Query("PRAGMA foreign_key_list('stock_log')")
+	if err != nil {
+		return err
+	}
+	defer fkRows.Close()
+	for fkRows.Next() {
+		var id, seq int
+		var tableName, fromCol, toCol, onUpdate, onDelete, match string
+		if err := fkRows.Scan(&id, &seq, &tableName, &fromCol, &toCol, &onUpdate, &onDelete, &match); err != nil {
+			return err
+		}
+		if strings.EqualFold(fromCol, "kean_id") && strings.EqualFold(tableName, "booking_keanid") {
+			hasKeanForeignKey = true
+			break
+		}
+	}
+
+	if hasQuantity && idIsIntegerPK && !hasKeanForeignKey {
 		if !hasRequestID {
 			if _, err := db.Exec("ALTER TABLE stock_log ADD COLUMN request_id TEXT"); err != nil {
 				return err
@@ -353,7 +374,6 @@ func ensureStockLogSchema(db *sql.DB) error {
 			request_id TEXT,
 			FOREIGN KEY (product_cd) REFERENCES products(product_cd),
 			FOREIGN KEY (busyo_id) REFERENCES booking_busyo(busyo_cd),
-			FOREIGN KEY (kean_id) REFERENCES booking_keanid(alias),
 			FOREIGN KEY (event_id) REFERENCES event_master(id)
 		)
 	`); err != nil {
@@ -926,6 +946,8 @@ func updateInventory(c *gin.Context) {
 		req.StaffID = ""
 	}
 
+	isSyntheticStaff := req.StaffID == "Shared" || req.StaffID == "Loaner"
+
 	eventID, eventName, delta, eventErr := resolveEventByAction(req.Action)
 	if eventErr == sql.ErrNoRows {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action"})
@@ -950,7 +972,7 @@ func updateInventory(c *gin.Context) {
 		}
 	}
 
-	if requiresDepartment && req.StaffID != "" {
+	if requiresDepartment && req.StaffID != "" && !isSyntheticStaff {
 		var staffCount int
 		err = db.QueryRow(
 			`SELECT COUNT(1)

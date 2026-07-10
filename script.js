@@ -38,6 +38,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var numpadRoot = null;
     var isSubmittingUpdate = false;
     var isPurchaseMode = false;
+    var syntheticStaffOptions = [
+        { id: 'Shared', name: '共用' },
+        { id: 'Loaner', name: '一時貸与' }
+    ];
 
     function setActiveListTab(tabName) {
         currentListTab = tabName;
@@ -461,12 +465,12 @@ document.addEventListener('DOMContentLoaded', function () {
             eventInputSectionHtml =
                 '<div class="event-input-section purchase-mode-note">' +
                 '<span class="section-label">購入モード</span>' +
-                '<p class="purchase-mode-note-text">部署・職員の選択は不要です。在庫追加のみ実行できます。</p>' +
+                '<p class="purchase-mode-note-text">部署・職員・状態の選択は不要です。在庫追加のみ実行できます。</p>' +
                 '</div>';
         } else {
             eventInputSectionHtml =
                 '<div class="event-input-section">' +
-                '<span class="section-label">部署・職員選択</span>' +
+                '<span class="section-label">部署・職員・状態選択</span>' +
                 '<div class="event-select-grid">' +
                 '<div class="event-select-block">' +
                 '<label for="department-select" class="event-label">部署</label>' +
@@ -657,6 +661,11 @@ document.addEventListener('DOMContentLoaded', function () {
             var staffStillValid = filteredStaffs.some(function (staff) {
                 return staff.id === selectedStaff;
             });
+            if (!staffStillValid) {
+                staffStillValid = syntheticStaffOptions.some(function (staff) {
+                    return staff.id === selectedStaff;
+                });
+            }
             if (!staffStillValid) selectedStaff = '';
             renderStaffSelect();
             updateRegistrationFlowState();
@@ -683,6 +692,17 @@ document.addEventListener('DOMContentLoaded', function () {
             opt.textContent = staff.name + ' (' + staff.id + ')';
             if (selectedStaff === staff.id) opt.selected = true;
             staffSelect.appendChild(opt);
+        }
+
+        if (canChooseStaff) {
+            for (var j = 0; j < syntheticStaffOptions.length; j++) {
+                var synthetic = syntheticStaffOptions[j];
+                var syntheticOpt = document.createElement('option');
+                syntheticOpt.value = synthetic.id;
+                syntheticOpt.textContent = synthetic.name;
+                if (selectedStaff === synthetic.id) syntheticOpt.selected = true;
+                staffSelect.appendChild(syntheticOpt);
+            }
         }
 
         staffSelect.disabled = !canChooseStaff;
