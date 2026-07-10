@@ -24,11 +24,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var makers = [];
     var departments = [];
     var staffs = [];
+    var statuses = [];
     var inventoryItems = [];
     var selectedCategory = '';
     var selectedMaker = '';
     var selectedDepartment = '';
     var selectedStaff = '';
+    var selectedStatus = '';
     var currentProduct = null;
     var pendingUpdate = null;
     var currentPhase = 'category';
@@ -92,9 +94,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function getStockDisplayText(stockQuantity, categoryName) {
         if (shouldShowStockStatusByCategory(categoryName)) {
-            return Number(stockQuantity) > 0 ? '在庫あり' : '在庫なし';
+            return Number(stockQuantity) > 0 ? '在庫あり' : '出庫中';
         }
         return String(stockQuantity);
+    }
+
+    function getListStockDisplayText(item) {
+        if (!item) return '出庫中';
+        if (item.is_disposed) return '廃棄';
+
+        var quantity = Number(item.stock_quantity || 0);
+        var statusName = (item.product && item.product.status_name) ? String(item.product.status_name).trim() : '';
+
+        if (quantity > 0 && statusName) {
+            return statusName;
+        }
+        return quantity > 0 ? '在庫あり' : '出庫中';
     }
 
     function getFilteredStaffs() {
@@ -404,7 +419,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var card = document.createElement('button');
                 card.type = 'button';
                 card.className = 'device-card';
-                var stockDisplayText = getStockDisplayText(item.stock_quantity, selectedCategoryName);
+                var stockDisplayText = getListStockDisplayText(item);
                 card.innerHTML =
                     '<div class="device-card-header">' +
                     '<div class="device-title-block">' +
@@ -428,8 +443,10 @@ document.addEventListener('DOMContentLoaded', function () {
         currentProduct = item;
         var selectedCategoryName = getSelectedCategoryName();
         var productCategoryName = (item && item.product && item.product.category_name) ? item.product.category_name : selectedCategoryName;
+        selectedStatus = (item && item.product && item.product.status_id) ? item.product.status_id : '';
         var currentStockText = getStockDisplayText(item.stock_quantity, productCategoryName);
-        var productInfoText = (item && item.product && item.product.product_info) ? item.product.product_info : '-';
+        var productInfoText = (item && item.product && item.product.product_info) ? item.product.product_info : '';
+        var editableProductInfoText = (item && item.product && item.product.product_info) ? item.product.product_info : '';
         var shouldHideQuantitySelector = shouldHideQuantitySelectorByCategory(productCategoryName);
         var quantitySectionHtml = '';
         var eventInputSectionHtml = '';
@@ -458,6 +475,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<div class="event-select-block">' +
                 '<label for="staff-select" class="event-label">職員名</label>' +
                 '<select id="staff-select" class="event-select"></select>' +
+                '</div>' +
+                '<div class="event-select-block">' +
+                '<label for="status-select" class="event-label">状態選択</label>' +
+                '<select id="status-select" class="event-select"></select>' +
                 '</div>' +
                 '</div>' +
                 '</div>';
@@ -490,7 +511,11 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>' +
             '<div class="product-info-block">' +
             '<span class="section-label">製品情報</span>' +
-            '<p class="product-info-text">' + productInfoText + '</p>' +
+            '<p class="product-info-text" id="product-info-editor" contenteditable="true" data-placeholder="製品情報を入力してください"></p>' +
+            '<div class="product-info-actions">' +
+            '<button id="product-info-save" type="button" class="product-info-save-btn">製品情報を変更</button>' +
+            '<button id="product-info-reset" type="button" class="product-info-reset-btn">元に戻す</button>' +
+            '</div>' +
             '</div>' +
             eventInputSectionHtml +
             quantitySectionHtml +
@@ -500,6 +525,76 @@ document.addEventListener('DOMContentLoaded', function () {
             currentProduct = null;
             renderDefaultPlaceholder();
         });
+
+        var productInfoEditor = document.getElementById('product-info-editor');
+        var productInfoSaveBtn = document.getElementById('product-info-save');
+        var productInfoResetBtn = document.getElementById('product-info-reset');
+        var initialProductInfo = editableProductInfoText;
+
+        if (productInfoEditor) {
+            productInfoEditor.textContent = productInfoText;
+            productInfoEditor.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                }
+            });
+            productInfoEditor.addEventListener('paste', function (event) {
+                event.preventDefault();
+                var text = '';
+                if (event.clipboardData && typeof event.clipboardData.getData === 'function') {
+                    text = event.clipboardData.getData('text/plain') || '';
+                }
+                text = text.replace(/\r?\n|\r/g, ' ');
+                document.execCommand('insertText', false, text);
+            });
+        }
+
+        if (productInfoResetBtn && productInfoEditor) {
+            productInfoResetBtn.addEventListener('click', function () {
+                productInfoEditor.textContent = initialProductInfo;
+            });
+        }
+
+        if (productInfoSaveBtn && productInfoEditor) {
+            productInfoSaveBtn.addEventListener('click', function () {
+                if (!currentProduct || !currentProduct.product || !currentProduct.product.product_cd) {
+                    showNotification('製品が未選択です', 'out');
+                    return;
+                }
+
+                var nextValue = (productInfoEditor.textContent || '').replace(/\r?\n|\r/g, ' ').trim();
+                if (nextValue === initialProductInfo) {
+                    showNotification('変更はありません', 'in');
+                    return;
+                }
+
+                productInfoSaveBtn.disabled = true;
+                requestJSON('/api/products/info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        product_cd: currentProduct.product.product_cd,
+                        product_info: nextValue,
+                        request_id: createRequestId()
+                    })
+                }, function () {
+                    currentProduct.product.product_info = nextValue;
+                    for (var idx = 0; idx < inventoryItems.length; idx++) {
+                        if (inventoryItems[idx] && inventoryItems[idx].product && inventoryItems[idx].product.product_cd === currentProduct.product.product_cd) {
+                            inventoryItems[idx].product.product_info = nextValue;
+                            break;
+                        }
+                    }
+                    initialProductInfo = nextValue;
+                    productInfoSaveBtn.disabled = false;
+                    showNotification('製品情報を更新しました', 'in');
+                }, function (err) {
+                    productInfoSaveBtn.disabled = false;
+                    var msg = (err && err.error) ? err.error : '製品情報の更新に失敗しました';
+                    showNotification(msg, 'out');
+                });
+            });
+        }
 
         var quantityMinusBtn = document.getElementById('quantity-minus');
         if (quantityMinusBtn) {
@@ -531,6 +626,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!isPurchaseMode) {
             renderDepartmentSelect();
             renderStaffSelect();
+            renderStatusSelect();
         }
         updateRegistrationFlowState();
     }
@@ -605,6 +701,30 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
+    function renderStatusSelect() {
+        var statusSelect = document.getElementById('status-select');
+        if (!statusSelect) return;
+
+        statusSelect.innerHTML = '';
+        var defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '状態を選択してください（任意）';
+        statusSelect.appendChild(defaultOpt);
+
+        for (var i = 0; i < statuses.length; i++) {
+            var status = statuses[i];
+            var opt = document.createElement('option');
+            opt.value = status.id;
+            opt.textContent = status.name + ' (' + status.id + ')';
+            if (selectedStatus === status.id) opt.selected = true;
+            statusSelect.appendChild(opt);
+        }
+
+        statusSelect.onchange = function () {
+            selectedStatus = statusSelect.value;
+        };
+    }
+
     function loadDepartments() {
         requestJSON('/api/departments', {}, function (data) {
             departments = data || [];
@@ -623,6 +743,15 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function loadStatuses() {
+        requestJSON('/api/statuses', {}, function (data) {
+            statuses = data || [];
+            renderStatusSelect();
+        }, function () {
+            showNotification('状態マスタの取得に失敗しました', 'out');
+        });
+    }
+
     function closeConfirmModal() {
         if (!confirmModal) return;
         confirmModal.classList.remove('visible');
@@ -638,6 +767,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedMaker = '';
         selectedDepartment = '';
         selectedStaff = '';
+        selectedStatus = '';
         currentProduct = null;
         currentPhase = 'category';
         makers = [];
@@ -678,8 +808,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var departmentSelect = document.getElementById('department-select');
         var staffSelect = document.getElementById('staff-select');
+        var statusSelect = document.getElementById('status-select');
         var departmentId = departmentSelect ? departmentSelect.value : '';
         var staffId = staffSelect ? staffSelect.value : '';
+        var statusId = statusSelect ? statusSelect.value : '';
 
         if (action === 'purchase') {
             departmentId = '';
@@ -692,6 +824,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             selectedDepartment = departmentId;
             selectedStaff = staffId;
+            selectedStatus = statusId;
             updateRegistrationFlowState();
         }
 
@@ -703,12 +836,16 @@ document.addEventListener('DOMContentLoaded', function () {
         var staffLabel = (staffId && staffSelect && staffSelect.selectedIndex >= 0)
             ? staffSelect.options[staffSelect.selectedIndex].text
             : '';
+        var statusLabel = (statusId && statusSelect && statusSelect.selectedIndex >= 0)
+            ? statusSelect.options[statusSelect.selectedIndex].text
+            : '';
 
         pendingUpdate = {
             action: action,
             quantity: quantity,
             departmentId: departmentId,
             staffId: staffId,
+            statusId: statusId,
             requestId: createRequestId()
         };
 
@@ -720,6 +857,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '数量: ' + quantity + '<br>' +
                 (action !== 'purchase' ? ('部署: ' + depLabel + '<br>') : '') +
                 (action !== 'purchase' && staffLabel ? ('職員: ' + staffLabel + '<br>') : '') +
+                (action !== 'purchase' && statusLabel ? ('状態: ' + statusLabel + '<br>') : '') +
                 '<br>' +
                 '登録しますか？';
         }
@@ -764,7 +902,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function updateStock(action, quantity, departmentId, staffId, requestId) {
+    function updateStock(action, quantity, departmentId, staffId, statusId, requestId) {
         requestJSON('/api/inventory/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -774,6 +912,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 quantity: quantity,
                 department_id: departmentId,
                 staff_id: staffId,
+                status_id: statusId,
                 request_id: requestId
             })
         }, function () {
@@ -881,6 +1020,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 pendingUpdate.quantity,
                 pendingUpdate.departmentId,
                 pendingUpdate.staffId,
+                pendingUpdate.statusId,
                 pendingUpdate.requestId
             );
         });
@@ -893,6 +1033,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     loadDepartments();
     loadStaffs();
+    loadStatuses();
 
     updateRegistrationFlowState();
     renderDefaultPlaceholder();

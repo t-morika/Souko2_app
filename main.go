@@ -56,6 +56,11 @@ type StaffDTO struct {
 	BusyoID string `json:"busyo_id"`
 }
 
+type StatusDTO struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 type ProductDTO struct {
 	ProductCD    string `json:"product_cd"`
 	ProductName  string `json:"product_name"`
@@ -63,6 +68,8 @@ type ProductDTO struct {
 	CategoryName string `json:"category_name"`
 	MakerID      string `json:"maker_id"`
 	MakerName    string `json:"maker_name"`
+	StatusID     string `json:"status_id"`
+	StatusName   string `json:"status_name"`
 	ModelNumber  string `json:"model_number"`
 	ProductInfo  string `json:"product_info"`
 	Remarks      string `json:"remarks"`
@@ -71,6 +78,7 @@ type ProductDTO struct {
 type InventoryItemDTO struct {
 	Product       ProductDTO `json:"product"`
 	StockQuantity int        `json:"stock_quantity"`
+	IsDisposed    bool       `json:"is_disposed"`
 	CreatedAt     string     `json:"created_at"`
 	UpdatedAt     string     `json:"updated_at"`
 }
@@ -109,6 +117,70 @@ var db *sql.DB
 
 const defaultSharedDBPath = `C:\Users\ks24.m-takahashi\Desktop\inventory.db`
 
+type statusMasterColumns struct {
+	ID   string
+	Name string
+}
+
+func isSafeIdentifier(name string) bool {
+	if name == "" {
+		return false
+	}
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func pickFirstExisting(candidates []string, columnMap map[string]string) string {
+	for _, c := range candidates {
+		if v, ok := columnMap[strings.ToLower(c)]; ok && isSafeIdentifier(v) {
+			return v
+		}
+	}
+	for _, v := range columnMap {
+		if isSafeIdentifier(v) {
+			return v
+		}
+	}
+	return ""
+}
+
+func resolveStatusMasterColumns() (statusMasterColumns, error) {
+	rows, err := db.Query("PRAGMA table_info('status_master')")
+	if err != nil {
+		return statusMasterColumns{}, err
+	}
+	defer rows.Close()
+
+	columnMap := map[string]string{}
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return statusMasterColumns{}, err
+		}
+		columnMap[strings.ToLower(name)] = name
+	}
+
+	if len(columnMap) == 0 {
+		return statusMasterColumns{}, fmt.Errorf("status_master has no columns")
+	}
+
+	idCol := pickFirstExisting([]string{"id", "status_id", "status_cd", "code", "cd"}, columnMap)
+	nameCol := pickFirstExisting([]string{"name", "status_name", "status", "label"}, columnMap)
+	if idCol == "" || nameCol == "" {
+		return statusMasterColumns{}, fmt.Errorf("failed to resolve status_master columns")
+	}
+
+	return statusMasterColumns{ID: idCol, Name: nameCol}, nil
+}
+
 func initDB(dbPath string) {
 	var err error
 	db, err = sql.Open("sqlite", dbPath)
@@ -129,6 +201,10 @@ func initDB(dbPath string) {
 	}
 
 	if err := ensureStockLogSchema(db); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := ensureProductInfoLogSchema(db); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -318,6 +394,30 @@ func ensureStockLogSchema(db *sql.DB) error {
 	return tx.Commit()
 }
 
+func ensureProductInfoLogSchema(db *sql.DB) error {
+	_, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS product_info_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			created_at TIMESTAMP DEFAULT (DATETIME('now', '+9 hours')),
+			product_cd CHAR(13) NOT NULL,
+			old_product_info TEXT,
+			new_product_info TEXT,
+			request_id TEXT,
+			FOREIGN KEY (product_cd) REFERENCES products(product_cd)
+		)
+	`)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS ux_product_info_log_request_id
+		ON product_info_log(request_id)
+		WHERE request_id IS NOT NULL
+	`)
+	return err
+}
+
 func main() {
 	exePath, err := os.Executable()
 	if err != nil {
@@ -353,7 +453,9 @@ func main() {
 	r.GET("/api/makers", getMakers)
 	r.GET("/api/departments", getDepartments)
 	r.GET("/api/staffs", getStaffs)
+	r.GET("/api/statuses", getStatuses)
 	r.GET("/api/products", getProductsFiltered)
+	r.POST("/api/products/info", updateProductInfo)
 	r.GET("/api/inventory", getInventory)
 	r.POST("/api/inventory/update", updateInventory)
 	r.POST("/api/barcode/search", searchByBarcode)
@@ -506,12 +608,49 @@ func getStaffs(c *gin.Context) {
 	c.JSON(http.StatusOK, staffs)
 }
 
+// getStatuses returns status master list
+func getStatuses(c *gin.Context) {
+	cols, err := resolveStatusMasterColumns()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	query := fmt.Sprintf(`
+		SELECT %s, %s FROM status_master
+		ORDER BY %s
+	`, cols.ID, cols.Name, cols.ID)
+	rows, err := db.Query(query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var statuses []StatusDTO
+	for rows.Next() {
+		var s StatusDTO
+		if err := rows.Scan(&s.ID, &s.Name); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		statuses = append(statuses, s)
+	}
+
+	c.JSON(http.StatusOK, statuses)
+}
+
 // getProductsFiltered returns products filtered by category_id and/or maker_id
 func getProductsFiltered(c *gin.Context) {
 	categoryID := c.Query("category_id")
 	makerID := c.Query("maker_id")
+	statusCols, err := resolveStatusMasterColumns()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
-	query := `
+	query := fmt.Sprintf(`
 		SELECT 
 			p.product_cd,
 			COALESCE(p.product_name, ''),
@@ -519,14 +658,17 @@ func getProductsFiltered(c *gin.Context) {
 			COALESCE(pc.name, ''),
 			COALESCE(p.maker_id, ''),
 			COALESCE(m.name, ''),
+			COALESCE(p.status_id, ''),
+			COALESCE(sm.%s, ''),
 			COALESCE(p.model_number, ''),
 			COALESCE(p.product_info, ''),
 			COALESCE(p.remarks, '')
 		FROM products p
 		LEFT JOIN product_category pc ON p.category_id = pc.id
 		LEFT JOIN maker m ON p.maker_id = m.id
+		LEFT JOIN status_master sm ON p.status_id = sm.%s
 		WHERE 1=1
-	`
+	`, statusCols.Name, statusCols.ID)
 
 	args := []interface{}{}
 
@@ -554,7 +696,8 @@ func getProductsFiltered(c *gin.Context) {
 		var p ProductDTO
 		if err := rows.Scan(
 			&p.ProductCD, &p.ProductName, &p.CategoryID, &p.CategoryName,
-			&p.MakerID, &p.MakerName, &p.ModelNumber, &p.ProductInfo, &p.Remarks,
+			&p.MakerID, &p.MakerName, &p.StatusID, &p.StatusName,
+			&p.ModelNumber, &p.ProductInfo, &p.Remarks,
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -568,8 +711,13 @@ func getProductsFiltered(c *gin.Context) {
 func getInventory(c *gin.Context) {
 	categoryID := c.Query("category_id")
 	makerID := c.Query("maker_id")
+	statusCols, err := resolveStatusMasterColumns()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
-	query := `
+	query := fmt.Sprintf(`
 		SELECT 
 			p.product_cd,
 			COALESCE(p.product_name, ''),
@@ -577,17 +725,27 @@ func getInventory(c *gin.Context) {
 			COALESCE(pc.name, ''),
 			COALESCE(p.maker_id, ''),
 			COALESCE(m.name, ''),
+			COALESCE(p.status_id, ''),
+			COALESCE(sm.%s, ''),
 			COALESCE(p.model_number, ''),
 			COALESCE(p.product_info, ''),
 			COALESCE(p.remarks, ''),
 			COALESCE(i.stock_quantity, 0), 
+			CASE WHEN EXISTS (
+				SELECT 1
+				FROM stock_log sl
+				INNER JOIN event_master em ON em.id = sl.event_id
+				WHERE sl.product_cd = p.product_cd
+				  AND em.name = '廃棄'
+			) THEN 1 ELSE 0 END,
 			COALESCE(i.created_at, ''), COALESCE(i.updated_at, '')
 		FROM products p
 		LEFT JOIN product_category pc ON p.category_id = pc.id
 		LEFT JOIN maker m ON p.maker_id = m.id
+		LEFT JOIN status_master sm ON p.status_id = sm.%s
 		LEFT JOIN inventory i ON p.product_cd = i.product_cd
 		WHERE 1=1
-	`
+	`, statusCols.Name, statusCols.ID)
 
 	args := []interface{}{}
 
@@ -613,19 +771,125 @@ func getInventory(c *gin.Context) {
 	var inventory []InventoryItemDTO
 	for rows.Next() {
 		var item InventoryItemDTO
+		var disposedFlag int
 		if err := rows.Scan(
 			&item.Product.ProductCD, &item.Product.ProductName,
 			&item.Product.CategoryID, &item.Product.CategoryName,
 			&item.Product.MakerID, &item.Product.MakerName,
+			&item.Product.StatusID, &item.Product.StatusName,
 			&item.Product.ModelNumber, &item.Product.ProductInfo, &item.Product.Remarks,
-			&item.StockQuantity, &item.CreatedAt, &item.UpdatedAt,
+			&item.StockQuantity, &disposedFlag, &item.CreatedAt, &item.UpdatedAt,
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		item.IsDisposed = disposedFlag == 1
 		inventory = append(inventory, item)
 	}
 	c.JSON(http.StatusOK, inventory)
+}
+
+// updateProductInfo updates the product_info field for a product.
+func updateProductInfo(c *gin.Context) {
+	var req struct {
+		ProductCD   string `json:"product_cd"`
+		ProductInfo string `json:"product_info"`
+		RequestID   string `json:"request_id"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	req.ProductCD = normalizeBarcodeInput(req.ProductCD)
+	if req.ProductCD == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "product_cd is required"})
+		return
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	if req.RequestID != "" {
+		var reqDupCount int
+		err = tx.QueryRow("SELECT COUNT(1) FROM product_info_log WHERE request_id = ?", req.RequestID).Scan(&reqDupCount)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if reqDupCount > 0 {
+			c.JSON(http.StatusOK, gin.H{"message": "Duplicate request ignored"})
+			return
+		}
+	}
+
+	var currentInfo string
+	err = tx.QueryRow(`
+		SELECT COALESCE(product_info, '')
+		FROM products
+		WHERE product_cd = ?
+	`, req.ProductCD).Scan(&currentInfo)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if currentInfo == req.ProductInfo {
+		c.JSON(http.StatusOK, gin.H{"message": "No changes"})
+		return
+	}
+
+	_, err = tx.Exec(`
+		UPDATE products
+		SET product_info = ?
+		WHERE product_cd = ?
+	`, req.ProductInfo, req.ProductCD)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var requestID interface{}
+	if req.RequestID != "" {
+		requestID = req.RequestID
+	} else {
+		requestID = nil
+	}
+
+	insertRes, err := tx.Exec(`
+		INSERT OR IGNORE INTO product_info_log (product_cd, old_product_info, new_product_info, request_id)
+		VALUES (?, ?, ?, ?)
+	`, req.ProductCD, currentInfo, req.ProductInfo, requestID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.RequestID != "" {
+		affected, affErr := insertRes.RowsAffected()
+		if affErr == nil && affected == 0 {
+			c.JSON(http.StatusOK, gin.H{"message": "Duplicate request ignored"})
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Product info updated"})
 }
 
 // updateInventory updates stock quantity
@@ -636,6 +900,7 @@ func updateInventory(c *gin.Context) {
 		Quantity     int    `json:"quantity"`
 		DepartmentID string `json:"department_id"`
 		StaffID      string `json:"staff_id"`
+		StatusID     string `json:"status_id"`
 		RequestID    string `json:"request_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -701,6 +966,25 @@ func updateInventory(c *gin.Context) {
 		}
 		if staffCount == 0 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "staff_id does not belong to department_id"})
+			return
+		}
+	}
+
+	if req.StatusID != "" {
+		var statusCount int
+		statusCols, colErr := resolveStatusMasterColumns()
+		if colErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": colErr.Error()})
+			return
+		}
+		statusCheckQuery := fmt.Sprintf("SELECT COUNT(1) FROM status_master WHERE %s = ?", statusCols.ID)
+		err = db.QueryRow(statusCheckQuery, req.StatusID).Scan(&statusCount)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if statusCount == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status_id"})
 			return
 		}
 	}
@@ -815,6 +1099,18 @@ func updateInventory(c *gin.Context) {
 		return
 	}
 
+	if req.StatusID != "" {
+		_, err = tx.Exec(`
+			UPDATE products
+			SET status_id = ?
+			WHERE product_cd = ?
+		`, req.StatusID, req.ProductCD)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -826,6 +1122,7 @@ func updateInventory(c *gin.Context) {
 		"event_name":    eventName,
 		"department_id": req.DepartmentID,
 		"staff_id":      req.StaffID,
+		"status_id":     req.StatusID,
 	})
 }
 
@@ -846,7 +1143,13 @@ func searchByBarcode(c *gin.Context) {
 	}
 
 	var item InventoryItemDTO
-	err := db.QueryRow(`
+	statusCols, colErr := resolveStatusMasterColumns()
+	if colErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": colErr.Error()})
+		return
+	}
+
+	query := fmt.Sprintf(`
 		SELECT 
 			p.product_cd,
 			COALESCE(p.product_name, ''),
@@ -854,23 +1157,38 @@ func searchByBarcode(c *gin.Context) {
 			COALESCE(pc.name, ''),
 			COALESCE(p.maker_id, ''),
 			COALESCE(m.name, ''),
+			COALESCE(p.status_id, ''),
+			COALESCE(sm.%s, ''),
 			COALESCE(p.model_number, ''),
 			COALESCE(p.product_info, ''),
 			COALESCE(p.remarks, ''),
 			COALESCE(i.stock_quantity, 0), 
+			CASE WHEN EXISTS (
+				SELECT 1
+				FROM stock_log sl
+				INNER JOIN event_master em ON em.id = sl.event_id
+				WHERE sl.product_cd = p.product_cd
+				  AND em.name = '廃棄'
+			) THEN 1 ELSE 0 END,
 			COALESCE(i.created_at, ''), COALESCE(i.updated_at, '')
 		FROM products p
 		LEFT JOIN product_category pc ON p.category_id = pc.id
 		LEFT JOIN maker m ON p.maker_id = m.id
+		LEFT JOIN status_master sm ON p.status_id = sm.%s
 		LEFT JOIN inventory i ON p.product_cd = i.product_cd
 		WHERE p.product_cd = ?
-	`, normalizedBarcode).Scan(
+	`, statusCols.Name, statusCols.ID)
+
+	var disposedFlag int
+	err := db.QueryRow(query, normalizedBarcode).Scan(
 		&item.Product.ProductCD, &item.Product.ProductName,
 		&item.Product.CategoryID, &item.Product.CategoryName,
 		&item.Product.MakerID, &item.Product.MakerName,
+		&item.Product.StatusID, &item.Product.StatusName,
 		&item.Product.ModelNumber, &item.Product.ProductInfo, &item.Product.Remarks,
-		&item.StockQuantity, &item.CreatedAt, &item.UpdatedAt,
+		&item.StockQuantity, &disposedFlag, &item.CreatedAt, &item.UpdatedAt,
 	)
+	item.IsDisposed = disposedFlag == 1
 
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
