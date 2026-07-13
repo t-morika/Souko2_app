@@ -76,11 +76,15 @@ type ProductDTO struct {
 }
 
 type InventoryItemDTO struct {
-	Product       ProductDTO `json:"product"`
-	StockQuantity int        `json:"stock_quantity"`
-	IsDisposed    bool       `json:"is_disposed"`
-	CreatedAt     string     `json:"created_at"`
-	UpdatedAt     string     `json:"updated_at"`
+	Product            ProductDTO `json:"product"`
+	LoanDepartmentID   string     `json:"loan_department_id"`
+	LoanDepartmentName string     `json:"loan_department_name"`
+	LoanStaffID        string     `json:"loan_staff_id"`
+	LoanStaffName      string     `json:"loan_staff_name"`
+	StockQuantity      int        `json:"stock_quantity"`
+	IsDisposed         bool       `json:"is_disposed"`
+	CreatedAt          string     `json:"created_at"`
+	UpdatedAt          string     `json:"updated_at"`
 }
 
 func resolveEventByAction(action string) (eventID string, eventName string, delta int, err error) {
@@ -750,6 +754,44 @@ func getInventory(c *gin.Context) {
 			COALESCE(p.model_number, ''),
 			COALESCE(p.product_info, ''),
 			COALESCE(p.remarks, ''),
+			COALESCE((
+				SELECT sl.busyo_id
+				FROM stock_log sl
+				INNER JOIN event_master em ON em.id = sl.event_id
+				WHERE sl.product_cd = p.product_cd
+				  AND em.name = '出庫'
+				ORDER BY sl.created_at DESC, sl.id DESC
+				LIMIT 1
+			), ''),
+			COALESCE((
+				SELECT b.name
+				FROM stock_log sl
+				INNER JOIN event_master em ON em.id = sl.event_id
+				LEFT JOIN booking_busyo b ON b.busyo_cd = sl.busyo_id
+				WHERE sl.product_cd = p.product_cd
+				  AND em.name = '出庫'
+				ORDER BY sl.created_at DESC, sl.id DESC
+				LIMIT 1
+			), ''),
+			COALESCE((
+				SELECT sl.kean_id
+				FROM stock_log sl
+				INNER JOIN event_master em ON em.id = sl.event_id
+				WHERE sl.product_cd = p.product_cd
+				  AND em.name = '出庫'
+				ORDER BY sl.created_at DESC, sl.id DESC
+				LIMIT 1
+			), ''),
+			COALESCE((
+				SELECT k.name
+				FROM stock_log sl
+				INNER JOIN event_master em ON em.id = sl.event_id
+				LEFT JOIN booking_keanid k ON k.alias = sl.kean_id
+				WHERE sl.product_cd = p.product_cd
+				  AND em.name = '出庫'
+				ORDER BY sl.created_at DESC, sl.id DESC
+				LIMIT 1
+			), ''),
 			COALESCE(i.stock_quantity, 0), 
 			CASE WHEN EXISTS (
 				SELECT 1
@@ -798,6 +840,8 @@ func getInventory(c *gin.Context) {
 			&item.Product.MakerID, &item.Product.MakerName,
 			&item.Product.StatusID, &item.Product.StatusName,
 			&item.Product.ModelNumber, &item.Product.ProductInfo, &item.Product.Remarks,
+			&item.LoanDepartmentID, &item.LoanDepartmentName,
+			&item.LoanStaffID, &item.LoanStaffName,
 			&item.StockQuantity, &disposedFlag, &item.CreatedAt, &item.UpdatedAt,
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -1184,6 +1228,44 @@ func searchByBarcode(c *gin.Context) {
 			COALESCE(p.model_number, ''),
 			COALESCE(p.product_info, ''),
 			COALESCE(p.remarks, ''),
+			COALESCE((
+				SELECT sl.busyo_id
+				FROM stock_log sl
+				INNER JOIN event_master em ON em.id = sl.event_id
+				WHERE sl.product_cd = p.product_cd
+				  AND em.name = '出庫'
+				ORDER BY sl.created_at DESC, sl.id DESC
+				LIMIT 1
+			), ''),
+			COALESCE((
+				SELECT b.name
+				FROM stock_log sl
+				INNER JOIN event_master em ON em.id = sl.event_id
+				LEFT JOIN booking_busyo b ON b.busyo_cd = sl.busyo_id
+				WHERE sl.product_cd = p.product_cd
+				  AND em.name = '出庫'
+				ORDER BY sl.created_at DESC, sl.id DESC
+				LIMIT 1
+			), ''),
+			COALESCE((
+				SELECT sl.kean_id
+				FROM stock_log sl
+				INNER JOIN event_master em ON em.id = sl.event_id
+				WHERE sl.product_cd = p.product_cd
+				  AND em.name = '出庫'
+				ORDER BY sl.created_at DESC, sl.id DESC
+				LIMIT 1
+			), ''),
+			COALESCE((
+				SELECT k.name
+				FROM stock_log sl
+				INNER JOIN event_master em ON em.id = sl.event_id
+				LEFT JOIN booking_keanid k ON k.alias = sl.kean_id
+				WHERE sl.product_cd = p.product_cd
+				  AND em.name = '出庫'
+				ORDER BY sl.created_at DESC, sl.id DESC
+				LIMIT 1
+			), ''),
 			COALESCE(i.stock_quantity, 0), 
 			CASE WHEN EXISTS (
 				SELECT 1
@@ -1208,6 +1290,8 @@ func searchByBarcode(c *gin.Context) {
 		&item.Product.MakerID, &item.Product.MakerName,
 		&item.Product.StatusID, &item.Product.StatusName,
 		&item.Product.ModelNumber, &item.Product.ProductInfo, &item.Product.Remarks,
+		&item.LoanDepartmentID, &item.LoanDepartmentName,
+		&item.LoanStaffID, &item.LoanStaffName,
 		&item.StockQuantity, &disposedFlag, &item.CreatedAt, &item.UpdatedAt,
 	)
 	item.IsDisposed = disposedFlag == 1
