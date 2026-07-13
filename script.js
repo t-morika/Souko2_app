@@ -131,6 +131,16 @@ document.addEventListener('DOMContentLoaded', function () {
         return action || '';
     }
 
+    function applyCheckoutSelectionDefaults(item) {
+        var isOutOfStock = !!item && !item.is_disposed && Number(item.stock_quantity || 0) <= 0;
+        var loanDepartmentId = (item && item.loan_department_id) ? String(item.loan_department_id).trim() : '';
+        var loanStaffId = (item && item.loan_staff_id) ? String(item.loan_staff_id).trim() : '';
+
+        selectedDepartment = isOutOfStock ? loanDepartmentId : '';
+        selectedStaff = (isOutOfStock && selectedDepartment) ? loanStaffId : '';
+        selectedStatus = (item && item.product && item.product.status_id) ? item.product.status_id : '';
+    }
+
     function bindPurchaseModeButton() {
         var purchaseModeToggleBtn = document.getElementById('purchase-mode-toggle');
         if (!purchaseModeToggleBtn) return;
@@ -447,7 +457,7 @@ document.addEventListener('DOMContentLoaded', function () {
         currentProduct = item;
         var selectedCategoryName = getSelectedCategoryName();
         var productCategoryName = (item && item.product && item.product.category_name) ? item.product.category_name : selectedCategoryName;
-        selectedStatus = (item && item.product && item.product.status_id) ? item.product.status_id : '';
+        applyCheckoutSelectionDefaults(item);
         var currentStockText = getStockDisplayText(item.stock_quantity, productCategoryName);
         var productInfoText = (item && item.product && item.product.product_info) ? item.product.product_info : '';
         var editableProductInfoText = (item && item.product && item.product.product_info) ? item.product.product_info : '';
