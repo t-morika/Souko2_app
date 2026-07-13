@@ -346,11 +346,56 @@ body {
     border-radius: 0.6rem;
     color: #d4d4d8;
     font-size: 0.95rem;
-    line-height: 1.5;
-    white-space: pre-wrap;
+    line-height: 1.45;
+    white-space: nowrap;
     word-break: break-word;
-    max-height: 6.5rem;
-    overflow-y: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    min-height: calc(1.45em + 1.1rem);
+    max-height: calc(1.45em + 1.1rem);
+    cursor: text;
+}
+
+.product-info-text:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.product-info-text:empty::before {
+    content: attr(data-placeholder);
+    color: #6b7280;
+}
+
+.product-info-actions {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.product-info-save-btn,
+.product-info-reset-btn {
+    border: 1px solid #475569;
+    border-radius: 0.55rem;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.product-info-save-btn {
+    background-color: #1d4ed8;
+    color: #eff6ff;
+    border-color: #2563eb;
+}
+
+.product-info-save-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.product-info-reset-btn {
+    background-color: #1f2937;
+    color: #e5e7eb;
 }
 
 /* Quantity Adjustment */
@@ -439,7 +484,7 @@ body {
 
 .event-select-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.9rem;
 }
 
