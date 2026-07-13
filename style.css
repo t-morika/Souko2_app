@@ -231,11 +231,7 @@ body {
     margin: 0;
 }
 
-.clear-btn {
-    padding: 0.4rem 0.9rem;
-    font-size: 0.78rem;
-    border-radius: 0.45rem;
-}
+
 
 /* プルダウン用スタイル */
 /* カテゴリー・メーカー選択を縦並び＆大きく */
@@ -300,8 +296,12 @@ body {
 .maker-select.is-placeholder {
     font-size: 1.68rem;
 }
+.clear-btn {
     cursor: pointer;
     transition: color 0.2s;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.78rem;
+    border-radius: 0.45rem;
 }
 
 .clear-btn:hover {
@@ -804,6 +804,7 @@ body {
         font-size: 0.72rem;
     }
 
+    .execution-section {
         letter-spacing: 0.08em;
         padding: 1rem;
         grid-template-columns: 1fr;
@@ -1118,10 +1119,6 @@ body {
 
 .product-detail {
     min-height: 22rem;
-}
-
-.app {
-    padding: 1rem 1.5rem;
 }
 
 .main {

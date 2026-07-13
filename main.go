@@ -4,13 +4,14 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/url"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	_ "modernc.org/sqlite"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func normalizeBarcodeInput(value string) string {
@@ -117,9 +118,81 @@ func resolveEventByAction(action string) (eventID string, eventName string, delt
 	return eventID, eventName, delta, nil
 }
 
-var db *sql.DB
+var db *DB
 
-const defaultSharedDBPath = `C:\Users\ks24.m-takahashi\Desktop\inventory.db`
+type DB struct {
+	*sql.DB
+}
+
+type Tx struct {
+	*sql.Tx
+}
+
+func rebindQuestionToDollar(query string) string {
+	var b strings.Builder
+	b.Grow(len(query) + 8)
+
+	argPos := 1
+	inSingleQuote := false
+	inDoubleQuote := false
+
+	for i := 0; i < len(query); i++ {
+		ch := query[i]
+
+		if ch == '\'' && !inDoubleQuote {
+			inSingleQuote = !inSingleQuote
+			b.WriteByte(ch)
+			continue
+		}
+		if ch == '"' && !inSingleQuote {
+			inDoubleQuote = !inDoubleQuote
+			b.WriteByte(ch)
+			continue
+		}
+
+		if ch == '?' && !inSingleQuote && !inDoubleQuote {
+			b.WriteString(fmt.Sprintf("$%d", argPos))
+			argPos++
+			continue
+		}
+
+		b.WriteByte(ch)
+	}
+
+	return b.String()
+}
+
+func (d *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return d.DB.Query(rebindQuestionToDollar(query), args...)
+}
+
+func (d *DB) QueryRow(query string, args ...interface{}) *sql.Row {
+	return d.DB.QueryRow(rebindQuestionToDollar(query), args...)
+}
+
+func (d *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return d.DB.Exec(rebindQuestionToDollar(query), args...)
+}
+
+func (d *DB) Begin() (*Tx, error) {
+	tx, err := d.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	return &Tx{Tx: tx}, nil
+}
+
+func (t *Tx) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return t.Tx.Query(rebindQuestionToDollar(query), args...)
+}
+
+func (t *Tx) QueryRow(query string, args ...interface{}) *sql.Row {
+	return t.Tx.QueryRow(rebindQuestionToDollar(query), args...)
+}
+
+func (t *Tx) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return t.Tx.Exec(rebindQuestionToDollar(query), args...)
+}
 
 type statusMasterColumns struct {
 	ID   string
@@ -154,7 +227,12 @@ func pickFirstExisting(candidates []string, columnMap map[string]string) string 
 }
 
 func resolveStatusMasterColumns() (statusMasterColumns, error) {
-	rows, err := db.Query("PRAGMA table_info('status_master')")
+	rows, err := db.Query(`
+		SELECT column_name
+		FROM information_schema.columns
+		WHERE table_schema = current_schema()
+		  AND table_name = 'status_master'
+	`)
 	if err != nil {
 		return statusMasterColumns{}, err
 	}
@@ -162,11 +240,8 @@ func resolveStatusMasterColumns() (statusMasterColumns, error) {
 
 	columnMap := map[string]string{}
 	for rows.Next() {
-		var cid int
-		var name, ctype string
-		var notnull, pk int
-		var dflt sql.NullString
-		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+		var name string
+		if err := rows.Scan(&name); err != nil {
 			return statusMasterColumns{}, err
 		}
 		columnMap[strings.ToLower(name)] = name
@@ -187,22 +262,16 @@ func resolveStatusMasterColumns() (statusMasterColumns, error) {
 
 func initDB(dbPath string) {
 	var err error
-	db, err = sql.Open("sqlite", dbPath)
+	raw, err := sql.Open("pgx", dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
+	db = &DB{DB: raw}
 
 	// Test connection
 	if err := db.Ping(); err != nil {
 		log.Fatal(err)
 	}
-
-	// Mitigate transient SQLITE_BUSY during schema checks/migrations.
-	_, _ = db.Exec("PRAGMA busy_timeout = 5000")
-	_, _ = db.Exec("PRAGMA journal_mode = WAL")
-
-	// Enable foreign keys
-	_, _ = db.Exec("PRAGMA foreign_keys = ON")
 
 	if err := ensureProductsBarcodeUniqueness(db); err != nil {
 		log.Fatal(err)
@@ -218,19 +287,53 @@ func initDB(dbPath string) {
 }
 
 func resolveDBPath(baseDir string) string {
-	if dbPath := strings.TrimSpace(os.Getenv("INVENTORY_DB_PATH")); dbPath != "" {
-		return dbPath
+	if dsn := strings.TrimSpace(os.Getenv("DATABASE_URL")); dsn != "" {
+		return dsn
 	}
 
-	if dbDir := strings.TrimSpace(os.Getenv("INVENTORY_DB_DIR")); dbDir != "" {
-		return filepath.Join(dbDir, "inventory.db")
+	host := strings.TrimSpace(os.Getenv("DB_HOST"))
+	if host == "" {
+		host = "localhost"
+	}
+
+	port := strings.TrimSpace(os.Getenv("DB_PORT"))
+	if port == "" {
+		port = "5432"
+	}
+
+	user := strings.TrimSpace(os.Getenv("DB_USER"))
+	if user == "" {
+		user = "postgres"
+	}
+
+	password := strings.TrimSpace(os.Getenv("DB_PASSWORD"))
+	if password == "" {
+		password = "postgres"
+	}
+
+	name := strings.TrimSpace(os.Getenv("DB_NAME"))
+	if name == "" {
+		name = "inventory"
+	}
+
+	sslMode := strings.TrimSpace(os.Getenv("DB_SSLMODE"))
+	if sslMode == "" {
+		sslMode = "disable"
 	}
 
 	_ = baseDir
-	return defaultSharedDBPath
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		url.QueryEscape(user),
+		url.QueryEscape(password),
+		host,
+		port,
+		url.QueryEscape(name),
+		url.QueryEscape(sslMode),
+	)
 }
 
-func ensureProductsBarcodeUniqueness(db *sql.DB) error {
+func ensureProductsBarcodeUniqueness(db *DB) error {
 	rows, err := db.Query(`
 		SELECT COALESCE(product_cd, '')
 		FROM products
@@ -266,110 +369,11 @@ func ensureProductsBarcodeUniqueness(db *sql.DB) error {
 	return err
 }
 
-func ensureStockLogSchema(db *sql.DB) error {
-	var exists int
-	err := db.QueryRow("SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name='stock_log'").Scan(&exists)
-	if err != nil {
-		return err
-	}
-
-	if exists == 0 {
-		_, err = db.Exec(`
-			CREATE TABLE stock_log (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				created_at TIMESTAMP DEFAULT (DATETIME('now', '+9 hours')),
-				product_cd CHAR(13),
-				busyo_id CHAR(2),
-				kean_id VARCHAR(20),
-				event_id CHAR(2),
-				quantity INTEGER NOT NULL DEFAULT 1,
-				FOREIGN KEY (product_cd) REFERENCES products(product_cd),
-				FOREIGN KEY (busyo_id) REFERENCES booking_busyo(busyo_cd),
-				FOREIGN KEY (event_id) REFERENCES event_master(id)
-			)
-		`)
-		return err
-	}
-
-	rows, err := db.Query("PRAGMA table_info('stock_log')")
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	hasQuantity := false
-	hasRequestID := false
-	idIsIntegerPK := false
-	hasKeanForeignKey := false
-	for rows.Next() {
-		var cid int
-		var name, ctype string
-		var notnull, pk int
-		var dflt sql.NullString
-		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
-			return err
-		}
-		if strings.EqualFold(name, "quantity") {
-			hasQuantity = true
-		}
-		if strings.EqualFold(name, "request_id") {
-			hasRequestID = true
-		}
-		if strings.EqualFold(name, "id") && pk == 1 {
-			upperType := strings.ToUpper(strings.TrimSpace(ctype))
-			if strings.Contains(upperType, "INT") {
-				idIsIntegerPK = true
-			}
-		}
-	}
-
-	fkRows, err := db.Query("PRAGMA foreign_key_list('stock_log')")
-	if err != nil {
-		return err
-	}
-	defer fkRows.Close()
-	for fkRows.Next() {
-		var id, seq int
-		var tableName, fromCol, toCol, onUpdate, onDelete, match string
-		if err := fkRows.Scan(&id, &seq, &tableName, &fromCol, &toCol, &onUpdate, &onDelete, &match); err != nil {
-			return err
-		}
-		if strings.EqualFold(fromCol, "kean_id") && strings.EqualFold(tableName, "booking_keanid") {
-			hasKeanForeignKey = true
-			break
-		}
-	}
-
-	if hasQuantity && idIsIntegerPK && !hasKeanForeignKey {
-		if !hasRequestID {
-			if _, err := db.Exec("ALTER TABLE stock_log ADD COLUMN request_id TEXT"); err != nil {
-				return err
-			}
-		}
-		_, err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS ux_stock_log_request_id ON stock_log(request_id) WHERE request_id IS NOT NULL")
-		return err
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = tx.Rollback()
-	}()
-
-	if _, err := tx.Exec("PRAGMA foreign_keys = OFF"); err != nil {
-		return err
-	}
-
-	if _, err := tx.Exec("ALTER TABLE stock_log RENAME TO stock_log_old"); err != nil {
-		return err
-	}
-
-	if _, err := tx.Exec(`
-		CREATE TABLE stock_log (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			created_at TIMESTAMP DEFAULT (DATETIME('now', '+9 hours')),
+func ensureStockLogSchema(db *DB) error {
+	if _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS stock_log (
+			id BIGSERIAL PRIMARY KEY,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			product_cd CHAR(13),
 			busyo_id CHAR(2),
 			kean_id VARCHAR(20),
@@ -384,45 +388,30 @@ func ensureStockLogSchema(db *sql.DB) error {
 		return err
 	}
 
-	insertSQL := `
-		INSERT INTO stock_log (created_at, product_cd, busyo_id, kean_id, event_id, quantity, request_id)
-		SELECT created_at, product_cd, busyo_id, kean_id, event_id, 1, NULL
-		FROM stock_log_old
-		ORDER BY created_at, rowid
-	`
-	if hasQuantity {
-		insertSQL = `
-			INSERT INTO stock_log (created_at, product_cd, busyo_id, kean_id, event_id, quantity, request_id)
-			SELECT created_at, product_cd, busyo_id, kean_id, event_id, COALESCE(quantity, 1), NULL
-			FROM stock_log_old
-			ORDER BY created_at, rowid
-		`
-	}
-
-	if _, err := tx.Exec(insertSQL); err != nil {
-		return fmt.Errorf("stock_log data migration failed: %w", err)
-	}
-
-	if _, err := tx.Exec("DROP TABLE stock_log_old"); err != nil {
+	if _, err := db.Exec(`ALTER TABLE stock_log ADD COLUMN IF NOT EXISTS quantity INTEGER NOT NULL DEFAULT 1`); err != nil {
 		return err
 	}
 
-	if _, err := tx.Exec("CREATE UNIQUE INDEX IF NOT EXISTS ux_stock_log_request_id ON stock_log(request_id) WHERE request_id IS NOT NULL"); err != nil {
+	if _, err := db.Exec(`ALTER TABLE stock_log ADD COLUMN IF NOT EXISTS request_id TEXT`); err != nil {
 		return err
 	}
 
-	if _, err := tx.Exec("PRAGMA foreign_keys = ON"); err != nil {
+	if _, err := db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS ux_stock_log_request_id
+		ON stock_log(request_id)
+		WHERE request_id IS NOT NULL
+	`); err != nil {
 		return err
 	}
 
-	return tx.Commit()
+	return nil
 }
 
-func ensureProductInfoLogSchema(db *sql.DB) error {
+func ensureProductInfoLogSchema(db *DB) error {
 	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS product_info_log (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			created_at TIMESTAMP DEFAULT (DATETIME('now', '+9 hours')),
+			id BIGSERIAL PRIMARY KEY,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			product_cd CHAR(13) NOT NULL,
 			old_product_info TEXT,
 			new_product_info TEXT,
@@ -800,7 +789,7 @@ func getInventory(c *gin.Context) {
 				WHERE sl.product_cd = p.product_cd
 				  AND em.name = '廃棄'
 			) THEN 1 ELSE 0 END,
-			COALESCE(i.created_at, ''), COALESCE(i.updated_at, '')
+			COALESCE(i.created_at::text, ''), COALESCE(i.updated_at::text, '')
 		FROM products p
 		LEFT JOIN product_category pc ON p.category_id = pc.id
 		LEFT JOIN maker m ON p.maker_id = m.id
@@ -932,8 +921,9 @@ func updateProductInfo(c *gin.Context) {
 	}
 
 	insertRes, err := tx.Exec(`
-		INSERT OR IGNORE INTO product_info_log (product_cd, old_product_info, new_product_info, request_id)
+		INSERT INTO product_info_log (product_cd, old_product_info, new_product_info, request_id)
 		VALUES (?, ?, ?, ?)
+		ON CONFLICT (request_id) DO NOTHING
 	`, req.ProductCD, currentInfo, req.ProductInfo, requestID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -1129,8 +1119,9 @@ func updateInventory(c *gin.Context) {
 	}
 
 	stockLogRes, err := tx.Exec(`
-		INSERT OR IGNORE INTO stock_log (product_cd, busyo_id, kean_id, event_id, quantity, request_id)
+		INSERT INTO stock_log (product_cd, busyo_id, kean_id, event_id, quantity, request_id)
 		VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT (request_id) DO NOTHING
 	`, req.ProductCD, busyoID, keanID, eventID, req.Quantity, requestID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -1274,7 +1265,7 @@ func searchByBarcode(c *gin.Context) {
 				WHERE sl.product_cd = p.product_cd
 				  AND em.name = '廃棄'
 			) THEN 1 ELSE 0 END,
-			COALESCE(i.created_at, ''), COALESCE(i.updated_at, '')
+			COALESCE(i.created_at::text, ''), COALESCE(i.updated_at::text, '')
 		FROM products p
 		LEFT JOIN product_category pc ON p.category_id = pc.id
 		LEFT JOIN maker m ON p.maker_id = m.id
@@ -1306,3 +1297,49 @@ func searchByBarcode(c *gin.Context) {
 
 	c.JSON(http.StatusOK, item)
 }
+
+/*
+Separated SQL for external migration files (.sql):
+
+-- 001_stock_log.sql
+CREATE TABLE IF NOT EXISTS stock_log (
+	id BIGSERIAL PRIMARY KEY,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	product_cd CHAR(13),
+	busyo_id CHAR(2),
+	kean_id VARCHAR(20),
+	event_id CHAR(2),
+	quantity INTEGER NOT NULL DEFAULT 1,
+	request_id TEXT,
+	FOREIGN KEY (product_cd) REFERENCES products(product_cd),
+	FOREIGN KEY (busyo_id) REFERENCES booking_busyo(busyo_cd),
+	FOREIGN KEY (event_id) REFERENCES event_master(id)
+);
+
+ALTER TABLE stock_log ADD COLUMN IF NOT EXISTS quantity INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE stock_log ADD COLUMN IF NOT EXISTS request_id TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_stock_log_request_id
+	ON stock_log(request_id)
+	WHERE request_id IS NOT NULL;
+
+-- 002_product_info_log.sql
+CREATE TABLE IF NOT EXISTS product_info_log (
+	id BIGSERIAL PRIMARY KEY,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	product_cd CHAR(13) NOT NULL,
+	old_product_info TEXT,
+	new_product_info TEXT,
+	request_id TEXT,
+	FOREIGN KEY (product_cd) REFERENCES products(product_cd)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_product_info_log_request_id
+	ON product_info_log(request_id)
+	WHERE request_id IS NOT NULL;
+
+-- 003_products_indexes.sql
+CREATE UNIQUE INDEX IF NOT EXISTS ux_products_product_cd
+	ON products(product_cd)
+	WHERE COALESCE(product_cd, '') <> '';
+*/
