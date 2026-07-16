@@ -445,13 +445,26 @@ func main() {
 		baseDir = wd
 	}
 
-	// Run as a local "tablet app" by default - use DebugMode to see route errors
-	gin.SetMode(gin.DebugMode)
+	// Respect GIN_MODE when provided; default to debug for local operation.
+	mode := strings.TrimSpace(os.Getenv("GIN_MODE"))
+	if mode == "" {
+		mode = gin.DebugMode
+	}
+	gin.SetMode(mode)
 
 	// Use the shared inventory.db path, preferring environment-based overrides.
 	initDB(resolveDBPath(baseDir))
 	defer db.Close()
 
+	r := buildRouter(baseDir)
+
+	log.Println("Server starting on http://localhost:8080")
+	if err := r.Run(":8080"); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func buildRouter(baseDir string) *gin.Engine {
 	r := gin.Default()
 	_ = r.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 
@@ -461,17 +474,19 @@ func main() {
 	r.StaticFile("/sw.js", filepath.Join(baseDir, "sw.js"))
 	r.StaticFile("/index.html", filepath.Join(baseDir, "index.html"))
 
-	// New hierarchical API routes
-	r.GET("/api/categories", getCategories)
-	r.GET("/api/makers", getMakers)
-	r.GET("/api/departments", getDepartments)
-	r.GET("/api/staffs", getStaffs)
-	r.GET("/api/statuses", getStatuses)
-	r.GET("/api/products", getProductsFiltered)
-	r.POST("/api/products/info", updateProductInfo)
-	r.GET("/api/inventory", getInventory)
-	r.POST("/api/inventory/update", updateInventory)
-	r.POST("/api/barcode/search", searchByBarcode)
+	api := r.Group("/api")
+	{
+		api.GET("/categories", getCategories)
+		api.GET("/makers", getMakers)
+		api.GET("/departments", getDepartments)
+		api.GET("/staffs", getStaffs)
+		api.GET("/statuses", getStatuses)
+		api.GET("/products", getProductsFiltered)
+		api.POST("/products/info", updateProductInfo)
+		api.GET("/inventory", getInventory)
+		api.POST("/inventory/update", updateInventory)
+		api.POST("/barcode/search", searchByBarcode)
+	}
 
 	// Avoid noisy 404 in browsers.
 	r.GET("/favicon.ico", func(c *gin.Context) { c.Status(http.StatusNoContent) })
@@ -481,8 +496,7 @@ func main() {
 		c.File(filepath.Join(baseDir, "index.html"))
 	})
 
-	log.Println("Server starting on http://localhost:8080")
-	r.Run(":8080")
+	return r
 }
 
 // getCategories returns all product categories
